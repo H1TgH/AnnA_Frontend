@@ -5,7 +5,7 @@ type View = 'welcome' | 'login' | 'register-step1' | 'register-step2';
 
 // Интерфейс для данных формы
 interface FormData {
-  emailOrPhone: string;
+  email: string;
   password: string;
   confirmPassword: string;
   firstName: string;
@@ -16,7 +16,7 @@ interface FormData {
 
 // Интерфейс для ошибок формы
 interface FormErrors {
-  emailOrPhone?: string;
+  email?: string;
   password?: string;
   confirmPassword?: string;
   firstName?: string;
@@ -26,7 +26,7 @@ interface FormErrors {
 }
 
 const initialFormData: FormData = {
-  emailOrPhone: '',
+  email: '',
   password: '',
   confirmPassword: '',
   firstName: '',
@@ -36,7 +36,7 @@ const initialFormData: FormData = {
 };
 
 const initialFormErrors: FormErrors = {
-  emailOrPhone: undefined,
+  email: undefined,
   password: undefined,
   confirmPassword: undefined,
   firstName: undefined,
@@ -61,12 +61,12 @@ const AuthPage: React.FC = () => {
 
   const validateStep1 = useCallback(() => {
     const newErrors: FormErrors = {};
-    if (!formData.emailOrPhone) {
-      newErrors.emailOrPhone = 'Почта или номер телефона обязательны.';
+    if (!formData.email) {
+      newErrors.email = 'Почта или номер телефона обязательны.';
     } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$|^\+?\d{10,15}$/.test(formData.emailOrPhone)
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$|^\+?\d{10,15}$/.test(formData.email)
     ) {
-      newErrors.emailOrPhone = 'Введите корректную почту или номер телефона.';
+      newErrors.email = 'Введите корректную почту или номер телефона.';
     }
     if (!formData.password) {
       newErrors.password = 'Пароль обязателен.';
@@ -127,8 +127,8 @@ const AuthPage: React.FC = () => {
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       const newErrors: FormErrors = {};
-      if (!formData.emailOrPhone) {
-        newErrors.emailOrPhone = 'Почта или номер телефона обязательны.';
+      if (!formData.email) {
+        newErrors.email = 'Почта или номер телефона обязательны.';
       }
       if (!formData.password) {
         newErrors.password = 'Пароль обязателен.';
@@ -137,7 +137,7 @@ const AuthPage: React.FC = () => {
 
       if (Object.keys(newErrors).length === 0) {
         console.log('Login data submitted:', {
-          emailOrPhone: formData.emailOrPhone,
+          email: formData.email,
           password: formData.password,
         });
         alert('Вход выполнен! (Данные отправлены в консоль)');
@@ -152,39 +152,37 @@ const AuthPage: React.FC = () => {
     switch (view) {
       case 'login':
         return (
-          <form onSubmit={handleLoginSubmit} className="flex flex-col gap-6">
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">Вход</h2>
-            <p className="text-gray-600 mb-6">
+          <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">Вход</h2>
+            <p className="text-gray-600 text-sm mb-4">
               Добро пожаловать обратно! Пожалуйста, войдите в свой аккаунт.
             </p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <label
-                htmlFor="emailOrPhone"
-                className="text-gray-700 font-medium"
+                htmlFor="email"
+                className="text-gray-700 font-medium text-sm"
               >
-                Почта или номер телефона
+                Почта
               </label>
               <input
-                id="emailOrPhone"
-                name="emailOrPhone"
+                id="email"
+                name="email"
                 type="text"
-                value={formData.emailOrPhone}
+                value={formData.email}
                 onChange={handleChange}
-                placeholder="Введите почту или номер телефона"
-                className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                  errors.emailOrPhone
+                placeholder="Введите почту"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                  errors.email
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               />
-              {errors.emailOrPhone && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.emailOrPhone}
-                </p>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
               )}
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="password" className="text-gray-700 font-medium">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="password" className="text-gray-700 font-medium text-sm">
                 Пароль
               </label>
               <input
@@ -194,32 +192,32 @@ const AuthPage: React.FC = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Введите пароль"
-                className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
                   errors.password
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               />
               {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
               )}
             </div>
             <button
               type="submit"
-              className="bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-4"
+              className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-3"
             >
               Войти
             </button>
             <a
               href="#"
-              className="text-center text-rose-600 font-semibold hover:underline mt-2"
+              className="text-center text-rose-600 font-semibold text-sm hover:underline mt-2"
             >
               Забыли пароль?
             </a>
             <button
               type="button"
               onClick={() => setView('welcome')}
-              className="text-gray-600 font-semibold py-3 rounded-xl border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-4"
+              className="text-gray-600 font-semibold py-2 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-3"
             >
               Назад
             </button>
@@ -227,42 +225,40 @@ const AuthPage: React.FC = () => {
         );
       case 'register-step1':
         return (
-          <form onSubmit={handleNextStep} className="flex flex-col gap-6">
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+          <form onSubmit={handleNextStep} className="flex flex-col gap-4">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">
               Создать аккаунт
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 text-sm mb-4">
               Присоединяйтесь к нашему сообществу! Введите свои данные для
               регистрации.
             </p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <label
-                htmlFor="emailOrPhone"
-                className="text-gray-700 font-medium"
+                htmlFor="email"
+                className="text-gray-700 font-medium text-sm"
               >
-                Почта или номер телефона
+                Почта
               </label>
               <input
-                id="emailOrPhone"
-                name="emailOrPhone"
+                id="email"
+                name="email"
                 type="text"
-                value={formData.emailOrPhone}
+                value={formData.email}
                 onChange={handleChange}
-                placeholder="Введите почту или номер телефона"
-                className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                  errors.emailOrPhone
+                placeholder="Введите почту"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                  errors.email
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               />
-              {errors.emailOrPhone && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.emailOrPhone}
-                </p>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
               )}
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="password" className="text-gray-700 font-medium">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="password" className="text-gray-700 font-medium text-sm">
                 Пароль
               </label>
               <input
@@ -272,20 +268,20 @@ const AuthPage: React.FC = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Придумайте пароль"
-                className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
                   errors.password
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               />
               {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
               )}
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               <label
                 htmlFor="confirmPassword"
-                className="text-gray-700 font-medium"
+                className="text-gray-700 font-medium text-sm"
               >
                 Подтверждение пароля
               </label>
@@ -296,38 +292,38 @@ const AuthPage: React.FC = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Повторите пароль"
-                className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
                   errors.confirmPassword
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               />
               {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-xs mt-1">
                   {errors.confirmPassword}
                 </p>
               )}
             </div>
             <button
               type="submit"
-              className="bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-4"
+              className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-3"
             >
               Далее
             </button>
-            <div className="relative my-4">
+            <div className="relative my-3">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-4 text-gray-500">или</span>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-3 text-gray-500">или</span>
               </div>
             </div>
             <button
               type="button"
-              className="flex items-center justify-center gap-3 bg-white text-gray-700 font-bold py-4 rounded-xl border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-200"
+              className="flex items-center justify-center gap-2 bg-white text-gray-700 font-bold py-3 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-200"
             >
               <svg
-                className="w-6 h-6"
+                className="w-5 h-5"
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -354,7 +350,7 @@ const AuthPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setView('welcome')}
-              className="text-gray-600 font-semibold py-3 rounded-xl border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-4"
+              className="text-gray-600 font-semibold py-2 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-3"
             >
               Назад
             </button>
@@ -362,18 +358,18 @@ const AuthPage: React.FC = () => {
         );
       case 'register-step2':
         return (
-          <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-6">
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">
+          <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">
               Расскажите о себе
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 text-sm mb-4">
               Пожалуйста, введите немного информации о себе.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
                 <label
                   htmlFor="firstName"
-                  className="text-gray-700 font-medium"
+                  className="text-gray-700 font-medium text-sm"
                 >
                   Имя
                 </label>
@@ -384,20 +380,20 @@ const AuthPage: React.FC = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   placeholder="Введите ваше имя"
-                  className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                  className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
                     errors.firstName
                       ? 'border-red-400 ring-red-200'
                       : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                   }`}
                 />
                 {errors.firstName && (
-                  <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+                  <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
                 )}
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
                 <label
                   htmlFor="lastName"
-                  className="text-gray-700 font-medium"
+                  className="text-gray-700 font-medium text-sm"
                 >
                   Фамилия
                 </label>
@@ -408,19 +404,19 @@ const AuthPage: React.FC = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   placeholder="Введите вашу фамилию"
-                  className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                  className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
                     errors.lastName
                       ? 'border-red-400 ring-red-200'
                       : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                   }`}
                 />
                 {errors.lastName && (
-                  <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
+                  <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
                 )}
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="dob" className="text-gray-700 font-medium">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="dob" className="text-gray-700 font-medium text-sm">
                 Дата рождения
               </label>
               <input
@@ -429,18 +425,18 @@ const AuthPage: React.FC = () => {
                 type="date"
                 value={formData.dob}
                 onChange={handleChange}
-                className={`p-4 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${
                   errors.dob
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               />
               {errors.dob && (
-                <p className="text-red-500 text-sm mt-1">{errors.dob}</p>
+                <p className="text-red-500 text-xs mt-1">{errors.dob}</p>
               )}
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="gender" className="text-gray-700 font-medium">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="gender" className="text-gray-700 font-medium text-sm">
                 Пол
               </label>
               <select
@@ -448,7 +444,7 @@ const AuthPage: React.FC = () => {
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className={`p-4 rounded-xl border-2 bg-white focus:outline-none focus:ring-2 transition-all duration-200 ${
+                className={`p-3 rounded-lg border-2 bg-white focus:outline-none focus:ring-2 transition-all duration-200 ${
                   errors.gender
                     ? 'border-red-400 ring-red-200'
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
@@ -463,19 +459,19 @@ const AuthPage: React.FC = () => {
                 <option value="prefer_not_to_say">Не хочу указывать</option>
               </select>
               {errors.gender && (
-                <p className="text-red-500 text-sm mt-1">{errors.gender}</p>
+                <p className="text-red-500 text-xs mt-1">{errors.gender}</p>
               )}
             </div>
             <button
               type="submit"
-              className="bg-rose-600 text-white font-bold py-4 rounded-xl hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-4"
+              className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-3"
             >
               Завершить регистрацию
             </button>
             <button
               type="button"
               onClick={() => setView('register-step1')}
-              className="text-gray-600 font-semibold py-3 rounded-xl border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-4"
+              className="text-gray-600 font-semibold py-2 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-3"
             >
               Назад
             </button>
@@ -484,25 +480,25 @@ const AuthPage: React.FC = () => {
       case 'welcome':
       default:
         return (
-          <div className="flex flex-col gap-8">
-            <h2 className="text-5xl font-extrabold text-gray-800 leading-tight">
+          <div className="flex flex-col gap-6">
+            <h2 className="text-4xl font-extrabold text-gray-800 leading-tight">
               Добро пожаловать в{' '}
               <span className="text-rose-600">AnnA</span>
             </h2>
-            <p className="text-gray-600 text-lg leading-relaxed">
+            <p className="text-gray-600 text-base leading-relaxed">
               Присоединяйтесь к нашему сообществу, чтобы общаться с друзьями,
               делиться моментами и находить новые интересы.
             </p>
-            <div className="flex flex-col md:flex-row gap-6 mt-6">
+            <div className="flex flex-col sm:flex-row gap-4 mt-4">
               <button
                 onClick={() => setView('register-step1')}
-                className="flex-1 bg-rose-600 text-white font-bold text-lg py-5 rounded-2xl hover:bg-rose-700 transition-colors duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-rose-200"
+                className="flex-1 bg-rose-600 text-white font-bold text-base py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 shadow-md focus:outline-none focus:ring-4 focus:ring-rose-200"
               >
                 Создать аккаунт
               </button>
               <button
                 onClick={() => setView('login')}
-                className="flex-1 bg-white text-rose-600 font-bold text-lg py-5 rounded-2xl border-2 border-rose-300 hover:bg-rose-50 transition-colors duration-200 shadow-lg focus:outline-none focus:ring-4 focus:ring-rose-200"
+                className="flex-1 bg-white text-rose-600 font-bold text-base py-3 rounded-lg border-2 border-rose-300 hover:bg-rose-50 transition-colors duration-200 shadow-md focus:outline-none focus:ring-4 focus:ring-rose-200"
               >
                 Войти
               </button>
@@ -521,29 +517,29 @@ const AuthPage: React.FC = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-rose-50 flex items-center justify-center p-8 font-sans">
-      <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-        <div className="flex flex-col items-center justify-center p-8 bg-rose-100 rounded-2xl text-center h-full">
-          <div className="w-32 h-32 mb-8">
+    <div className="min-h-screen bg-rose-50 flex items-center justify-center p-4 sm:p-6 font-sans">
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div className="flex flex-col items-center justify-center p-6 bg-rose-100 rounded-xl text-center">
+          <div className="w-24 h-24 mb-6">
             <div className="bg-rose-200 border-4 border-dashed border-rose-300 rounded-full w-full h-full flex items-center justify-center">
-              <span className="text-rose-600 text-6xl font-bold">A</span>
+              <span className="text-rose-600 text-4xl font-bold">A</span>
             </div>
           </div>
-          <h1 className="text-5xl font-extrabold text-rose-800 mb-6 leading-tight">
+          <h1 className="text-4xl font-extrabold text-rose-800 mb-4 leading-tight">
             AnnA
           </h1>
-          <p className="text-rose-700 text-lg leading-relaxed max-w-md">
+          <p className="text-rose-700 text-base leading-relaxed max-w-sm">
             Ваше место для общения, обмена и вдохновения.
           </p>
-          <div className="mt-12">
-            <div className="bg-rose-200 rounded-3xl w-full h-64 border-4 border-dashed border-rose-300 flex items-center justify-center">
-              <span className="text-rose-600 text-xl font-semibold">
+          <div className="mt-8">
+            <div className="bg-rose-200 rounded-2xl w-full h-48 border-4 border-dashed border-rose-300 flex items-center justify-center">
+              <span className="text-rose-600 text-base font-semibold">
                 Illustration Placeholder
               </span>
             </div>
           </div>
         </div>
-        <div className="flex flex-col justify-center p-8">{renderForm}</div>
+        <div className="flex flex-col justify-center p-6">{renderForm}</div>
       </div>
     </div>
   );
