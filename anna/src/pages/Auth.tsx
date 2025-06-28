@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, ChangeEvent, FormEvent } from "react";
 
 // Определение типа View
-type View = 'welcome' | 'login' | 'register-step1' | 'register-step2';
+type View = 'welcome' | 'login' | 'register-step1' | 'register-step2' | 'email-confirmation';
 
 // Интерфейс для данных формы
 interface FormData {
@@ -110,18 +110,25 @@ const AuthPage: React.FC = () => {
     [view, validateStep1]
   );
 
+  // New handler for finishing registration and showing email confirmation
   const handleRegisterSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (validateStep2()) {
-        console.log('Registration data submitted:', formData);
-        alert('Регистрация успешна! (Данные отправлены в консоль)');
-        setFormData(initialFormData);
-        setView('welcome');
+        // Instead of finishing registration here, show email confirmation view
+        setView('email-confirmation');
       }
     },
-    [formData, validateStep2]
+    [validateStep2]
   );
+
+  // Handler for confirming email (simulate confirmation)
+  const handleConfirmEmail = useCallback(() => {
+    alert('Почта подтверждена! Регистрация завершена.');
+    setFormData(initialFormData);
+    setErrors(initialFormErrors);
+    setView('welcome');
+  }, []);
 
   const handleLoginSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
@@ -477,6 +484,31 @@ const AuthPage: React.FC = () => {
             </button>
           </form>
         );
+      case 'email-confirmation':
+        return (
+          <div className="flex flex-col gap-6 p-6">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">
+              Подтверждение почты
+            </h2>
+            <p className="text-gray-600 text-sm mb-4">
+              На адрес <span className="font-semibold">{formData.email}</span> было отправлено письмо с кодом подтверждения.
+              Пожалуйста, проверьте вашу почту и подтвердите регистрацию.
+            </p>
+            <button
+              onClick={handleConfirmEmail}
+              className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200"
+            >
+              Я подтвердил(а) почту
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('register-step2')}
+              className="text-gray-600 font-semibold py-2 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-3"
+            >
+              Назад
+            </button>
+          </div>
+        );
       case 'welcome':
       default:
         return (
@@ -514,6 +546,7 @@ const AuthPage: React.FC = () => {
     handleNextStep,
     handleRegisterSubmit,
     handleLoginSubmit,
+    handleConfirmEmail,
   ]);
 
   return (
