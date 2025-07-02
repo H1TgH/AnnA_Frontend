@@ -23,6 +23,7 @@ interface FormErrors {
   lastName?: string;
   dob?: string;
   gender?: string;
+  general?: string; // Для общих ошибок (например, от сервера)
 }
 
 const initialFormData: FormData = {
@@ -43,6 +44,7 @@ const initialFormErrors: FormErrors = {
   lastName: undefined,
   dob: undefined,
   gender: undefined,
+  general: undefined,
 };
 
 const AuthPage: React.FC = () => {
@@ -54,7 +56,7 @@ const AuthPage: React.FC = () => {
     (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
       setFormData((prevData) => ({ ...prevData, [name]: value }));
-      setErrors((prevErrors) => ({ ...prevErrors, [name]: undefined }));
+      setErrors((prevErrors) => ({ ...prevErrors, [name]: undefined, general: undefined }));
     },
     []
   );
@@ -62,11 +64,9 @@ const AuthPage: React.FC = () => {
   const validateStep1 = useCallback(() => {
     const newErrors: FormErrors = {};
     if (!formData.email) {
-      newErrors.email = 'Почта или номер телефона обязательны.';
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$|^\+?\d{10,15}$/.test(formData.email)
-    ) {
-      newErrors.email = 'Введите корректную почту или номер телефона.';
+      newErrors.email = 'Почта обязательна.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Введите корректную почту.';
     }
     if (!formData.password) {
       newErrors.password = 'Пароль обязателен.';
@@ -101,100 +101,127 @@ const AuthPage: React.FC = () => {
   const handleNextStep = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (view === 'register-step1') {
-        if (validateStep1()) {
-          setView('register-step2');
-        }
+      if (view === 'register-step1' && validateStep1()) {
+        setView('register-step2');
       }
     },
     [view, validateStep1]
   );
 
-const handleRegisterSubmit = useCallback(
-  async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (validateStep2()) {
+  const handleRegisterSubmit = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (validateStep2()) {
+        const payload = {
+          email: formData.email,
+          password: formData.password,
+          name: formData.firstName,
+          surname: formData.lastName,
+          birthday: formData.dob,
+          gender: formData.gender ? formData.gender.toUpperCase() : null,
+        };
+        console.log("Register payload:", payload);
+        try {
+          const response = await fetch('http://localhost:8000/api/v1/public/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          console.log("Register response:", data);
+          if (!response.ok) {
+            throw new Error(data.detail || 'Registration failed');
+          }
+          setView('email-confirmation');
+        } catch (error: any) {
+          console.error("Registration error:", error.message);
+          setErrors({ general: error.message || 'Ошибка регистрации' });
+        }
+      }
+    },
+    [validateStep2, formData]
+  );
+
+  const handleLoginSubmit = useCallback(
+    async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const newErrors: FormErrors = {};
+      if (!formData.email) {
+        newErrors.email = 'Почта обязательна.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'Введите корректную почту.';
+      }
+      if (!formData.password) {
+        newErrors.password = 'Пароль обязателен.';
+      }
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
+
       const payload = {
         email: formData.email,
         password: formData.password,
-        name: formData.firstName,
-        surname: formData.lastName,
-        birthday: formData.dob, // Формат YYYY-MM-DD
-        gender: formData.gender ? formData.gender.toUpperCase() : null, // male -> MALE, female -> FEMALE, пусто -> null
       };
-      console.log("Register payload:", payload); // Отладка
+      console.log("Login payload:", payload);
       try {
-        const response = await fetch('http://localhost:8000/api/v1/public/register', {
+        const response = await fetch('http://localhost:8000/api/v1/public/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         const data = await response.json();
-        console.log("Response:", data); // Отладка
+        console.log("Login response:", data);
         if (!response.ok) {
-          throw new Error(data.detail || 'Registration failed');
+          throw new Error(data.detail || 'Login failed');
         }
-        setView('email-confirmation');
-      } catch (error) {
-        console.error("Registration error:", error);
-        setErrors({ email: 'Ошибка регистрации' });
-      }
-    }
-  },
-  [validateStep2, formData]
-);
-
-const handleConfirmEmail = useCallback(async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  if (!token) {
-    setErrors({ email: 'Токен подтверждения отсутствует' });
-    return;
-  }
-
-  try {
-    const response = await fetch('http://localhost:8000/api/v1/public/confirm-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.detail || 'Email confirmation failed');
-    }
-    alert('Почта подтверждена! Регистрация завершена.');
-    setFormData(initialFormData);
-    setErrors(initialFormErrors);
-    setView('welcome');
-  } catch (error) {
-    setErrors({ email: 'Ошибка подтверждения почты' });
-  }
-}, []);
-
-  const handleLoginSubmit = useCallback(
-    (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      const newErrors: FormErrors = {};
-      if (!formData.email) {
-        newErrors.email = 'Почта или номер телефона обязательны.';
-      }
-      if (!formData.password) {
-        newErrors.password = 'Пароль обязателен.';
-      }
-      setErrors(newErrors);
-
-      if (Object.keys(newErrors).length === 0) {
-        console.log('Login data submitted:', {
-          email: formData.email,
-          password: formData.password,
-        });
-        alert('Вход выполнен! (Данные отправлены в консоль)');
+        // Сохраняем токен в localStorage
+        localStorage.setItem('access_token', data.access_token);
         setFormData(initialFormData);
+        setErrors(initialFormErrors);
         setView('welcome');
+        // Временное уведомление в UI
+        setErrors({ general: 'Вход выполнен успешно!' });
+        // TODO: Перенаправить на защищённую страницу (например, /dashboard)
+        setTimeout(() => {
+          window.location.href = '/profile'; // Заменить на твой маршрут
+        }, 2000);
+      } catch (error: any) {
+        console.error("Login error:", error.message);
+        setErrors({ general: error.message || 'Ошибка входа' });
       }
     },
     [formData]
   );
+
+  const handleConfirmEmail = useCallback(async () => {
+    const token = new URLSearchParams(window.location.search).get('token');
+    console.log("Extracted token:", token);
+    if (!token) {
+      setErrors({ general: 'Токен подтверждения отсутствует' });
+      return;
+    }
+
+    try {
+      // Используем GET, так как бэкенд ожидает query-параметр
+      const response = await fetch(`http://localhost:8000/api/v1/public/confirm-email?token=${token}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      console.log("Confirm email response:", data);
+      if (!response.ok) {
+        throw new Error(data.detail || 'Email confirmation failed');
+      }
+      setFormData(initialFormData);
+      setErrors({ general: 'Почта успешно подтверждена!' });
+      setView('welcome');
+      // TODO: Перенаправить на страницу логина или другую
+    } catch (error: any) {
+      console.error("Confirmation error:", error.message);
+      setErrors({ general: error.message || 'Ошибка подтверждения почты' });
+    }
+  }, []);
 
   const renderForm = useMemo(() => {
     switch (view) {
@@ -205,11 +232,13 @@ const handleConfirmEmail = useCallback(async () => {
             <p className="text-gray-600 text-sm mb-4">
               Добро пожаловать обратно! Пожалуйста, войдите в свой аккаунт.
             </p>
+            {errors.general && (
+              <p className={`text-sm mb-4 ${errors.general.includes('успешно') ? 'text-green-500' : 'text-red-500'}`}>
+                {errors.general}
+              </p>
+            )}
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="email"
-                className="text-gray-700 font-medium text-sm"
-              >
+              <label htmlFor="email" className="text-gray-700 font-medium text-sm">
                 Почта
               </label>
               <input
@@ -281,11 +310,11 @@ const handleConfirmEmail = useCallback(async () => {
               Присоединяйтесь к нашему сообществу! Введите свои данные для
               регистрации.
             </p>
+            {errors.general && (
+              <p className="text-red-500 text-sm mb-4">{errors.general}</p>
+            )}
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="email"
-                className="text-gray-700 font-medium text-sm"
-              >
+              <label htmlFor="email" className="text-gray-700 font-medium text-sm">
                 Почта
               </label>
               <input
@@ -413,6 +442,9 @@ const handleConfirmEmail = useCallback(async () => {
             <p className="text-gray-600 text-sm mb-4">
               Пожалуйста, введите немного информации о себе.
             </p>
+            {errors.general && (
+              <p className="text-red-500 text-sm mb-4">{errors.general}</p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label
@@ -531,6 +563,11 @@ const handleConfirmEmail = useCallback(async () => {
               На адрес <span className="font-semibold">{formData.email}</span> было отправлено письмо с кодом подтверждения.
               Пожалуйста, проверьте вашу почту и подтвердите регистрацию.
             </p>
+            {errors.general && (
+              <p className={`text-sm mb-4 ${errors.general.includes('успешно') ? 'text-green-500' : 'text-red-500'}`}>
+                {errors.general}
+              </p>
+            )}
             <button
               onClick={handleConfirmEmail}
               className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200"
@@ -558,6 +595,11 @@ const handleConfirmEmail = useCallback(async () => {
               Присоединяйтесь к нашему сообществу, чтобы общаться с друзьями,
               делиться моментами и находить новые интересы.
             </p>
+            {errors.general && (
+              <p className={`text-sm mb-4 ${errors.general.includes('успешно') ? 'text-green-500' : 'text-red-500'}`}>
+                {errors.general}
+              </p>
+            )}
             <div className="flex flex-col sm:flex-row gap-4 mt-4">
               <button
                 onClick={() => setView('register-step1')}
