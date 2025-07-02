@@ -110,25 +110,66 @@ const AuthPage: React.FC = () => {
     [view, validateStep1]
   );
 
-  // New handler for finishing registration and showing email confirmation
-  const handleRegisterSubmit = useCallback(
-    (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (validateStep2()) {
-        // Instead of finishing registration here, show email confirmation view
+const handleRegisterSubmit = useCallback(
+  async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (validateStep2()) {
+      const payload = {
+        email: formData.email,
+        password: formData.password,
+        name: formData.firstName,
+        surname: formData.lastName,
+        birthday: formData.dob, // Формат YYYY-MM-DD
+        gender: formData.gender ? formData.gender.toUpperCase() : null, // male -> MALE, female -> FEMALE, пусто -> null
+      };
+      console.log("Register payload:", payload); // Отладка
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/public/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        console.log("Response:", data); // Отладка
+        if (!response.ok) {
+          throw new Error(data.detail || 'Registration failed');
+        }
         setView('email-confirmation');
+      } catch (error) {
+        console.error("Registration error:", error);
+        setErrors({ email: 'Ошибка регистрации' });
       }
-    },
-    [validateStep2]
-  );
+    }
+  },
+  [validateStep2, formData]
+);
 
-  // Handler for confirming email (simulate confirmation)
-  const handleConfirmEmail = useCallback(() => {
+const handleConfirmEmail = useCallback(async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  if (!token) {
+    setErrors({ email: 'Токен подтверждения отсутствует' });
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:8000/api/v1/public/confirm-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Email confirmation failed');
+    }
     alert('Почта подтверждена! Регистрация завершена.');
     setFormData(initialFormData);
     setErrors(initialFormErrors);
     setView('welcome');
-  }, []);
+  } catch (error) {
+    setErrors({ email: 'Ошибка подтверждения почты' });
+  }
+}, []);
 
   const handleLoginSubmit = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
@@ -457,13 +498,9 @@ const AuthPage: React.FC = () => {
                     : 'border-gray-200 focus:border-rose-300 focus:ring-rose-100'
                 }`}
               >
-                <option value="" disabled>
-                  Выберите пол
-                </option>
-                <option value="male">Мужской</option>
-                <option value="female">Женский</option>
-                <option value="other">Другой</option>
-                <option value="prefer_not_to_say">Не хочу указывать</option>
+                <option value="">Не указано</option>
+                <option value="MALE">Мужской</option>
+                <option value="FEMALE">Женский</option>
               </select>
               {errors.gender && (
                 <p className="text-red-500 text-xs mt-1">{errors.gender}</p>
