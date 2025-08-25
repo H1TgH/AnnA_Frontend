@@ -29,7 +29,7 @@ const Header: React.FC = () => {
 
   const handleLogout = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/public/logout', {
+      const response = await fetch('http://localhost:8000/api/v1/users/logout', {
         method: 'POST',
         credentials: 'include',
       });

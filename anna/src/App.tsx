@@ -12,8 +12,9 @@ interface UserInfo {
   surname: string;
   email: string;
   birthday: string;
-  gender: string;
+  gender: string | null;
   avatar_url: string | null;
+  status: string | null;
 }
 
 interface AuthContextType {
@@ -69,8 +70,9 @@ const App: React.FC = () => {
         surname: userData.surname,
         email: userData.email,
         birthday: userData.birthday,
-        gender: userData.gender,
+        gender: userData.gender || null,
         avatar_url: userData.avatar_url,
+        status: userData.status || null,
       });
       document.cookie = `user_id=${userData.id};path=/;max-age=${30 * 60}`;
       return userData.id;
