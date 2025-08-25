@@ -1,9 +1,8 @@
 import { useState, useCallback, useMemo, useEffect, ChangeEvent, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 
-// View type
- type View = "welcome" | "login" | "register-step1" | "register-step2" | "email-confirmation";
+type View = "welcome" | "login" | "register-step1" | "register-step2" | "email-confirmation";
 
-// Interfaces
 interface FormData {
   email: string;
   password: string;
@@ -25,6 +24,10 @@ interface FormErrors {
   general?: string;
 }
 
+interface AuthPageProps {
+  onLogin: () => Promise<string | null>;
+}
+
 const initialFormData: FormData = {
   email: "",
   password: "",
@@ -37,29 +40,29 @@ const initialFormData: FormData = {
 
 const initialFormErrors: FormErrors = {};
 
-const AuthPage: React.FC = () => {
+const getCookie = (name: string): string | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+};
+
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
+  const navigate = useNavigate();
   const [view, setView] = useState<View>("welcome");
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<FormErrors>(initialFormErrors);
-
-  // Forgot-password modal state
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState<boolean>(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState<string>("");
   const [forgotPasswordError, setForgotPasswordError] = useState<string | null>(null);
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState<string | null>(null);
 
-  /* ==============================
-          COMMON HANDLERS
-  ============================== */
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
   }, []);
 
-  /* ==============================
-         VALIDATIONS (omitted)
-  ============================== */
   const validateStep1 = useCallback(() => {
     const newErrors: FormErrors = {};
     if (!formData.email) newErrors.email = "Почта обязательна.";
@@ -81,9 +84,6 @@ const AuthPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  /* ==============================
-             VIEW HANDLERS
-  ============================== */
   const handleNextStep = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -109,6 +109,7 @@ const AuthPage: React.FC = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          credentials: 'include',
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Registration failed");
@@ -134,22 +135,27 @@ const AuthPage: React.FC = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: formData.email, password: formData.password }),
+          credentials: 'include',
         });
         const data = await res.json();
+        console.log('Login response:', data);
         if (!res.ok) throw new Error(data.detail || "Login failed");
-        localStorage.setItem("access_token", data.access_token);
+
         setErrors({ general: "Вход выполнен успешно!" });
-        setTimeout(() => (window.location.href = "/profile"), 2000);
+        const userId = await onLogin();
+        if (userId) {
+          console.log('Navigating to:', `/profile/${userId}`);
+          navigate(`/profile/${userId}`);
+        } else {
+          setErrors({ general: "Ошибка: не удалось получить данные пользователя" });
+        }
       } catch (err: any) {
         setErrors({ general: err.message || "Ошибка входа" });
       }
     },
-    [formData]
+    [formData, onLogin, navigate]
   );
 
-  /* ==============================
-        FORGOT PASSWORD LOGIC
-  ============================== */
   const handleForgotPasswordToggle = useCallback(() => {
     setIsForgotPasswordOpen((prev) => !prev);
     setForgotPasswordEmail("");
@@ -172,6 +178,7 @@ const AuthPage: React.FC = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: forgotPasswordEmail }),
+          credentials: 'include',
         });
         if (!res.ok) {
           const data = await res.json();
@@ -185,9 +192,6 @@ const AuthPage: React.FC = () => {
     [forgotPasswordEmail]
   );
 
-  /* ==============================
-             RENDER FORMS
-  ============================== */
   const renderForm = useMemo(() => {
     switch (view) {
       case "login":
@@ -212,14 +216,159 @@ const AuthPage: React.FC = () => {
           </form>
         );
 
-      /* Other cases remain unchanged (register steps, email confirmation, welcome) */
       case "register-step1":
-        /* ... (omitted for brevity, identical to previous) */
-        return null;
+        return (
+          <form onSubmit={handleNextStep} className="flex flex-col gap-4">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">Создание аккаунта</h2>
+            <p className="text-gray-600 text-sm mb-4">Введите данные для регистрации.</p>
+            {errors.general && <p className="text-red-500 text-sm mb-4">{errors.general}</p>}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="email" className="text-gray-700 font-medium text-sm">Почта</label>
+              <input
+                id="email"
+                name="email"
+                type="text"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Введите почту"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.email ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              />
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="password" className="text-gray-700 font-medium text-sm">Пароль</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Минимум 8 символов"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.password ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              />
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="confirmPassword" className="text-gray-700 font-medium text-sm">Подтверждение пароля</label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Повторите пароль"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.confirmPassword ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              />
+              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+            </div>
+            <button
+              type="submit"
+              className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-3"
+            >
+              Далее
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("welcome")}
+              className="text-gray-600 font-semibold py-2 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-3"
+            >
+              Назад
+            </button>
+          </form>
+        );
+
       case "register-step2":
-        return null;
+        return (
+          <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4">
+            <h2 className="text-3xl font-bold text-gray-800 mb-3">Завершение регистрации</h2>
+            <p className="text-gray-600 text-sm mb-4">Заполните личные данные.</p>
+            {errors.general && <p className="text-red-500 text-sm mb-4">{errors.general}</p>}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="firstName" className="text-gray-700 font-medium text-sm">Имя</label>
+              <input
+                id="firstName"
+                name="firstName"
+                type="text"
+                value={formData.firstName}
+                onChange={handleChange}
+                placeholder="Введите ваше имя"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.firstName ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              />
+              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="lastName" className="text-gray-700 font-medium text-sm">Фамилия</label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                value={formData.lastName}
+                onChange={handleChange}
+                placeholder="Введите вашу фамилию"
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.lastName ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              />
+              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="dob" className="text-gray-700 font-medium text-sm">Дата рождения</label>
+              <input
+                id="dob"
+                name="dob"
+                type="date"
+                value={formData.dob}
+                onChange={handleChange}
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.dob ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              />
+              {errors.dob && <p className="text-red-500 text-xs mt-1">{errors.dob}</p>}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="gender" className="text-gray-700 font-medium text-sm">Пол</label>
+              <select
+                id="gender"
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className={`p-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-200 ${errors.gender ? "border-red-400 ring-red-200" : "border-gray-200 focus:border-rose-300 focus:ring-rose-100"}`}
+              >
+                <option value="">Выберите пол</option>
+                <option value="male">Мужской</option>
+                <option value="female">Женский</option>
+              </select>
+              {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
+            </div>
+            <button
+              type="submit"
+              className="bg-rose-600 text-white font-bold py-3 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-3"
+            >
+              Зарегистрироваться
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("register-step1")}
+              className="text-gray-600 font-semibold py-2 rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors duration-200 mt-3"
+            >
+              Назад
+            </button>
+          </form>
+        );
+
       case "email-confirmation":
-        return null;
+        return (
+          <div className="flex flex-col gap-6 items-center text-center">
+            <h2 className="text-3xl font-bold text-gray-800">Подтверждение почты</h2>
+            <p className="text-gray-600 text-base">
+              Мы отправили письмо на <span className="font-semibold">{formData.email}</span>. Пожалуйста, проверьте вашу почту и перейдите по ссылке для подтверждения аккаунта.
+            </p>
+            <button
+              type="button"
+              onClick={() => setView("welcome")}
+              className="bg-rose-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 mt-3"
+            >
+              Вернуться на главную
+            </button>
+          </div>
+        );
+
       default:
         return (
           <div className="flex flex-col gap-6">
@@ -233,15 +382,11 @@ const AuthPage: React.FC = () => {
           </div>
         );
     }
-  }, [view, formData, errors, handleChange, handleLoginSubmit, handleForgotPasswordToggle]);
+  }, [view, formData, errors, handleChange, handleLoginSubmit, handleForgotPasswordToggle, handleNextStep, handleRegisterSubmit]);
 
-  /* ==============================
-                JSX
-  ============================== */
   return (
     <div className="min-h-screen bg-rose-50 flex items-center justify-center p-4 sm:p-6 font-sans">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-        {/* Left panel */}
         <div className="flex flex-col items-center justify-center p-6 bg-rose-100 rounded-xl text-center">
           <div className="w-24 h-24 mb-6">
             <div className="bg-rose-200 border-4 border-dashed border-rose-300 rounded-full w-full h-full flex items-center justify-center">
@@ -256,12 +401,8 @@ const AuthPage: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Right panel – dynamic form */}
         <div className="flex flex-col justify-center p-6">{renderForm}</div>
       </div>
-
-      {/* Forgot Password Modal */}
       {isForgotPasswordOpen && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-fade-in-up">
