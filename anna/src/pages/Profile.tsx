@@ -150,7 +150,7 @@ const ProfilePage: React.FC = () => {
       setPosts(data.posts.map((post: any) => ({
         id: post.id,
         text: post.text,
-        images: post.images.map((url: string) => `${url}?t=${Date.now()}`), // Добавляем параметр времени
+        images: post.images,
         created_at: post.created_at,
         likes_count: post.likes_count,
         comments_count: post.comments_count,
@@ -374,7 +374,7 @@ const ProfilePage: React.FC = () => {
       const saveData = await saveResponse.json();
       if (!saveResponse.ok) throw new Error(saveData.detail || 'Ошибка сохранения аватара');
 
-      const newAvatarUrl = `${saveData.avatar_url || uploadData.object_name}?t=${Date.now()}`;
+      const newAvatarUrl = saveData.avatar_url || uploadData.object_name;
       setProfile((prev) => (prev ? { ...prev, avatar_url: newAvatarUrl } : prev));
       setUser((prev) => (prev ? { ...prev, avatar_url: newAvatarUrl } : prev));
       setIsEditingAvatar(false);
