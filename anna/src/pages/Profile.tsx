@@ -203,6 +203,12 @@ const ProfilePage: React.FC = () => {
   };
 
   const handlePostSubmit = async () => {
+    // Проверяем, что есть либо текст, либо изображения
+    if (!newPost.content?.trim() && newPost.images.length === 0) {
+      setPostErrors({ content: 'Добавьте текст или изображения', images: '' });
+      return;
+    }
+    
     const success = await handleCreatePost();
     if (success) {
       toggleCreatePost();
@@ -311,7 +317,7 @@ const ProfilePage: React.FC = () => {
           handleCommentChange={setCommentInput}
           handleReplyChange={setReplyInput}
           toggleReplyForm={toggleReplyForm}
-          toggleComments={toggleComments}
+          toggleComments={async (postId: string) => await toggleComments(postId, posts, setPosts)}
           loadMoreComments={loadMoreComments}
           handlePrevPostImage={(postId) => handlePrevPostImage(postId, posts)}
           handleNextPostImage={(postId) => handleNextPostImage(postId, posts)}

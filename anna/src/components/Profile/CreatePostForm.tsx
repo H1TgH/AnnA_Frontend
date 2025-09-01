@@ -73,6 +73,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({
             </label>
             <textarea
               id="post-content"
+              name="content"
               value={newPost.content}
               onChange={handlePostChange}
               placeholder="Поделитесь своими мыслями, новостями или просто тем, что вас вдохновляет..."

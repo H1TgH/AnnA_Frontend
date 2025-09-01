@@ -26,6 +26,7 @@ export interface Post {
   comments_count: number;
   comments: Comment[];
   likes: string[];
+  is_liked?: boolean;
 }
 
 export const calculateAge = (birthday: string): number => {

@@ -61,7 +61,8 @@ export const usePostActions = (
             ? {
                 ...post,
                 likes_count: post.likes_count + 1,
-                likes: [...post.likes, user.id],
+                likes: [...(post.likes || []), user.id],
+                is_liked: true,
               }
             : post
         )
@@ -76,7 +77,8 @@ export const usePostActions = (
                 ? {
                     ...post,
                     likes_count: post.likes_count - 1,
-                    likes: post.likes.filter((id: string) => id !== user.id),
+                    likes: (post.likes || []).filter((id: string) => id !== user.id),
+                    is_liked: false,
                   }
                 : post
             )

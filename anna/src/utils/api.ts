@@ -66,6 +66,7 @@ export const endpoints = {
     create: '/posts',
     like: (id: string) => `/posts/like/${id}`,
     comment: (id: string) => `/posts/comment/${id}`,
+    comments: (id: string) => `/posts/comments/${id}`,
     uploadUrl: '/posts/upload-url',
   },
 }; 

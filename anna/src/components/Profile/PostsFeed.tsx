@@ -16,7 +16,7 @@ interface PostsFeedProps {
   handleCommentChange: (postId: string, value: string) => void;
   handleReplyChange: (commentId: string, value: string) => void;
   toggleReplyForm: (commentId: string) => void;
-  toggleComments: (postId: string) => void;
+  toggleComments: (postId: string) => Promise<void>;
   loadMoreComments: (postId: string) => void;
   handlePrevPostImage: (postId: string) => void;
   handleNextPostImage: (postId: string) => void;
@@ -153,7 +153,7 @@ const PostsFeed: React.FC<PostsFeedProps> = ({
                   className={`flex items-center gap-2 p-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 ${
                     !user 
                       ? 'opacity-50 cursor-not-allowed text-gray-400' 
-                      : post.likes.includes(user?.id || '') 
+                      : post.is_liked || (post.likes && post.likes.includes(user?.id || ''))
                         ? 'text-rose-600 bg-rose-50 hover:bg-rose-100' 
                         : 'text-gray-600 hover:bg-gray-100'
                   }`}
@@ -163,12 +163,12 @@ const PostsFeed: React.FC<PostsFeedProps> = ({
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className={`h-6 w-6 transition-transform duration-200 ${
-                      post.likes.includes(user?.id || '') ? 'scale-110' : ''
+                      post.is_liked || (post.likes && post.likes.includes(user?.id || '')) ? 'scale-110' : ''
                     }`}
-                    fill={post.likes.includes(user?.id || '') ? 'currentColor' : 'none'}
+                    fill={post.is_liked || (post.likes && post.likes.includes(user?.id || '')) ? 'currentColor' : 'none'}
                     viewBox="0 0 24 24"
                     stroke="currentColor"
-                    strokeWidth={post.likes.includes(user?.id || '') ? 0 : 2}
+                    strokeWidth={post.is_liked || (post.likes && post.likes.includes(user?.id || '')) ? 0 : 2}
                   >
                     <path
                       strokeLinecap="round"

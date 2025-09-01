@@ -32,7 +32,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <div className="absolute top-32 left-1/3 w-16 h-16 bg-white/10 rounded-full"></div>
         </div>
         
-        <div className="absolute -bottom-12 left-8 transform translate-y-0">
+        <div className="absolute bottom-8 left-8 transform translate-y-0">
           <div
             className={`w-36 h-36 rounded-full bg-gray-200 border-6 border-white overflow-hidden relative shadow-2xl transition-all duration-300 ${
               isOwnProfile ? 'cursor-pointer hover:scale-105' : ''
@@ -75,7 +75,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
       </div>
       
-      <div className="pt-16 pb-8 px-8">
+      <div className="pt-12 pb-8 px-8">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
           <div className="flex-1">
             <h1 className="text-5xl font-bold text-gray-800 mb-3 flex items-center gap-3">
