@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../App';
-import { UserProfile, Post, calculateAge } from '../components/types/Profile';
 import ProfileHeader from '../components/Profile/ProfileHeader';
 import AvatarEditor from '../components/Profile/AvatarEditor';
 import ProfileEditor from '../components/Profile/ProfileEditor';
@@ -9,652 +8,241 @@ import CreatePostForm from '../components/Profile/CreatePostForm';
 import PhotosFeed from '../components/Profile/PhotosFeed';
 import PostsFeed from '../components/Profile/PostsFeed';
 import ImageModal from '../components/Profile/ImageModal';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorDisplay from '../components/ErrorDisplay';
+import CreatePostButton from '../components/CreatePostButton';
+
+import { useProfile } from '../hooks/useProfile';
+import { usePosts } from '../hooks/usePosts';
+import { useUIState } from '../hooks/useUIState';
+import { useComments } from '../hooks/useComments';
+import { useImages } from '../hooks/useImages';
+import { useProfileForm, usePostForm } from '../hooks/useForms';
+import { useAvatar } from '../hooks/useAvatar';
+import { usePostActions } from '../hooks/usePostActions';
+import { useDataFetching } from '../hooks/useDataFetching';
+import { usePostImages } from '../hooks/usePostImages';
+import { useProfileActions } from '../hooks/useProfileActions';
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user, isLoading: authLoading, setUser } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isOwnProfile, setIsOwnProfile] = useState<boolean>(false);
-  const [isEditingAvatar, setIsEditingAvatar] = useState<boolean>(false);
-  const [isAvatarButtonVisible, setIsAvatarButtonVisible] = useState<boolean>(false);
-  const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
-  const [isCreatingPost, setIsCreatingPost] = useState<boolean>(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [isHoveringAvatar, setIsHoveringAvatar] = useState<boolean>(false);
-  const [formData, setFormData] = useState({
+
+  // Основные хуки состояния
+  const {
+    profile,
+    isLoading,
+    error,
+    isOwnProfile,
+    setProfileData,
+    updateProfile,
+    setLoading,
+    setErrorState,
+  } = useProfile();
+
+  const {
+    posts,
+    newPost,
+    postErrors,
+    allPhotos,
+    addPost,
+    updatePost,
+    resetNewPost,
+    setNewPostData,
+    setPosts,
+    setPostErrors,
+  } = usePosts();
+
+  const {
+    isEditingAvatar,
+    isAvatarButtonVisible,
+    isEditingProfile,
+    isCreatingPost,
+    isHoveringAvatar,
+    setIsHoveringAvatar,
+    toggleAvatarEdit,
+    toggleProfileEdit,
+    toggleCreatePost,
+    showAvatarButton,
+    hideAvatarButton,
+  } = useUIState();
+
+  const {
+    commentInputs,
+    replyInputs,
+    replyFormVisible,
+    commentErrors,
+    replyErrors,
+    visibleComments,
+    setCommentInput,
+    setReplyInput,
+    toggleReplyForm,
+    toggleComments,
+    loadMoreComments,
+    clearCommentInput,
+    clearReplyInput,
+    setCommentErrors,
+    setReplyErrors,
+    setVisibleComments,
+  } = useComments();
+
+  const {
+    selectedImage,
+    currentImageIndex,
+    currentImageIndices,
+    handleImageClick,
+    handleCloseModal,
+    handlePrevImage,
+    handleNextImage,
+    handlePrevPostImage,
+    handleNextPostImage,
+    setCurrentImageIndices,
+  } = useImages();
+
+  const {
+    formData,
+    formErrors,
+    setFormData,
+    setFormErrors,
+    handleFormChange,
+    resetForm,
+  } = useProfileForm({
     name: '',
     surname: '',
     status: '',
     birthday: '',
     gender: '',
   });
-  const [formErrors, setFormErrors] = useState({
-    name: '',
-    surname: '',
-    status: '',
-    birthday: '',
-  });
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
-  const [newPost, setNewPost] = useState({
-    content: '',
-    images: [] as File[],
-    imageUrls: [] as string[],
-  });
-  const [postErrors, setPostErrors] = useState({
-    content: '',
-    images: '',
-  });
-  const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({});
-  const [replyInputs, setReplyInputs] = useState<{ [commentId: string]: string }>({});
-  const [replyFormVisible, setReplyFormVisible] = useState<{ [commentId: string]: boolean }>({});
-  const [commentErrors, setCommentErrors] = useState<{ [postId: string]: string }>({});
-  const [replyErrors, setReplyErrors] = useState<{ [commentId: string]: string }>({});
-  const [visibleComments, setVisibleComments] = useState<{ [postId: string]: number }>({});
-  const [currentImageIndices, setCurrentImageIndices] = useState<{ [postId: string]: number }>({});
 
-  const allPhotos = useMemo(() => {
-    return posts.reduce((acc: string[], post) => [...acc, ...post.images], []);
-  }, [posts]);
+  const {
+    newPost: postFormData,
+    postErrors: postFormErrors,
+    setNewPost: setPostFormData,
+    setPostErrors: setPostFormErrors,
+    handlePostChange,
+    resetPostForm,
+  } = usePostForm();
 
-  const fetchProfile = useCallback(async () => {
-    if (!id || !user) {
-      setError('Пользователь не авторизован или ID профиля не указан');
-      navigate('/', { replace: true });
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const isOwn = id === user.id;
-      setIsOwnProfile(isOwn);
+  // Хуки для действий
+  const { handleProfileSave } = useProfileActions(
+    formData,
+    setFormErrors,
+    updateProfile,
+    setUser
+  );
 
-      if (isOwn) {
-        setProfile({ ...user, status: user.status || null, gender: user.gender || null });
-      } else {
-        const response = await fetch(`http://localhost:8000/api/v1/users/${id}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-        const profileData = await response.json();
-        if (!response.ok) throw new Error(profileData.detail || 'Пользователь не найден');
-        setProfile({
-          id: profileData.id,
-          name: profileData.name,
-          surname: profileData.surname,
-          email: profileData.email || '',
-          birthday: profileData.birthday,
-          gender: profileData.gender || null,
-          avatar_url: profileData.avatar_url,
-          status: profileData.status || null,
-        });
-      }
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки профиля');
-      navigate('/', { replace: true });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id, user, navigate]);
+  const { handleCreatePost, handleLikePost, handleAddComment, handleAddReply } = usePostActions(
+    user,
+    posts,
+    setPosts,
+    newPost,
+    setNewPostData,
+    setPostErrors,
+    setErrorState
+  );
 
-  const fetchPosts = useCallback(async () => {
-    if (!id) return;
-    try {
-      const response = await fetch(`http://localhost:8000/api/v1/posts/${id}?limit=10`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Ошибка загрузки постов');
-      setPosts(data.posts.map((post: any) => ({
-        id: post.id,
-        text: post.text,
-        images: post.images,
-        created_at: post.created_at,
-        likes_count: post.likes_count,
-        comments_count: post.comments_count,
-        comments: post.comments || [],
-        likes: post.likes || [],
-      })));
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки постов');
-    }
-  }, [id]);
+  const { handlePostImagesChange, removePostImage } = usePostImages(
+    newPost,
+    setNewPostData,
+    setPostErrors
+  );
 
-  const handleAvatarClick = useCallback(() => {
+  const { avatarFile, handleAvatarChange, handleAvatarSave, resetAvatar } = useAvatar(
+    isOwnProfile,
+    updateProfile,
+    setUser
+  );
+
+  // Хуки для загрузки данных
+  const { fetchProfile, fetchPosts } = useDataFetching(
+    id,
+    user,
+    setProfileData,
+    setLoading,
+    setErrorState,
+    setPosts
+  );
+
+  // Обработчики событий
+  const handleAvatarClick = () => {
     if (isOwnProfile) {
-      setIsAvatarButtonVisible(true);
+      showAvatarButton();
     }
-  }, [isOwnProfile]);
+  };
 
-  const handleAvatarEditToggle = useCallback(() => {
-    setIsEditingAvatar((prev) => !prev);
-    setAvatarFile(null);
-    setIsAvatarButtonVisible(false);
-  }, []);
+  const handleAvatarEditToggle = () => {
+    toggleAvatarEdit();
+    resetAvatar();
+  };
 
-  const handleProfileEditToggle = useCallback(() => {
+  const handleProfileEditToggle = () => {
     if (profile) {
-      setFormData({
+      resetForm({
         name: profile.name,
         surname: profile.surname,
         status: profile.status || '',
         birthday: profile.birthday,
         gender: profile.gender || '',
       });
-      setFormErrors({ name: '', surname: '', status: '', birthday: '' });
     }
-    setIsEditingProfile((prev) => !prev);
-  }, [profile]);
+    toggleProfileEdit();
+  };
 
-  const handleCreatePostToggle = useCallback(() => {
-    setIsCreatingPost((prev) => !prev);
-    setNewPost({ content: '', images: [], imageUrls: [] });
-    setPostErrors({ content: '', images: '' });
-  }, []);
+  const handleCreatePostToggle = () => {
+    toggleCreatePost();
+    resetPostForm();
+  };
 
-  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setAvatarFile(file);
-  }, []);
-
-  const handleFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setFormErrors((prev) => ({ ...prev, [name]: '' }));
-  }, []);
-
-  const handlePostChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewPost((prev) => ({ ...prev, [name]: value }));
-    setPostErrors((prev) => ({ ...prev, [name]: '' }));
-  }, []);
-
-  const handlePostImagesChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const newImages = Array.from(files).slice(0, 10 - newPost.images.length);
+  const handleFormSubmit = async () => {
     try {
-      const uploadUrls = await Promise.all(
-        newImages.map(async () => {
-          const response = await fetch('http://localhost:8000/api/v1/posts/upload-url', {
-            method: 'GET',
-            credentials: 'include',
-          });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.detail || 'Ошибка получения URL для загрузки');
-          return data;
-        })
-      );
-
-      const uploadedUrls: string[] = [];
-      for (let i = 0; i < newImages.length; i++) {
-        await fetch(uploadUrls[i].upload_url, {
-          method: 'PUT',
-          body: newImages[i],
-        });
-        uploadedUrls.push(uploadUrls[i].object_name);
-      }
-
-      setNewPost((prev) => ({
-        ...prev,
-        images: [...prev.images, ...newImages],
-        imageUrls: [...prev.imageUrls, ...uploadedUrls],
-      }));
-      setPostErrors((prev) => ({ ...prev, images: '' }));
+      await handleProfileSave();
+      toggleProfileEdit();
     } catch (err: any) {
-      setPostErrors((prev) => ({ ...prev, images: err.message || 'Ошибка загрузки изображений' }));
+      setErrorState(err.message);
     }
-  }, [newPost.images, newPost.imageUrls]);
+  };
 
-  const removePostImage = useCallback((index: number) => {
-    setNewPost((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
-    }));
-  }, []);
-
-  const handleCommentChange = useCallback((postId: string, value: string) => {
-    setCommentInputs((prev) => ({ ...prev, [postId]: value }));
-    setCommentErrors((prev) => ({ ...prev, [postId]: '' }));
-  }, []);
-
-  const handleReplyChange = useCallback((commentId: string, value: string) => {
-    setReplyInputs((prev) => ({ ...prev, [commentId]: value }));
-    setReplyErrors((prev) => ({ ...prev, [commentId]: '' }));
-  }, []);
-
-  const toggleReplyForm = useCallback((commentId: string) => {
-    setReplyFormVisible((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
-    setReplyInputs((prev) => ({ ...prev, [commentId]: '' }));
-    setReplyErrors((prev) => ({ ...prev, [commentId]: '' }));
-  }, []);
-
-  const toggleComments = useCallback((postId: string) => {
-    setVisibleComments((prev) => ({
-      ...prev,
-      [postId]: prev[postId] === undefined || prev[postId] === 0 ? 3 : 0,
-    }));
-  }, []);
-
-  const loadMoreComments = useCallback((postId: string) => {
-    setVisibleComments((prev) => ({
-      ...prev,
-      [postId]: (prev[postId] || 3) + 3,
-    }));
-  }, []);
-
-  const handlePrevPostImage = useCallback((postId: string) => {
-    setCurrentImageIndices((prev) => {
-      const currentIndex = prev[postId] || 0;
-      const post = posts.find((p) => p.id === postId);
-      const nextIndex = currentIndex > 0 ? currentIndex - 1 : (post?.images.length || 1) - 1;
-      return { ...prev, [postId]: nextIndex };
-    });
-  }, [posts]);
-
-  const handleNextPostImage = useCallback((postId: string) => {
-    setCurrentImageIndices((prev) => {
-      const currentIndex = prev[postId] || 0;
-      const post = posts.find((p) => p.id === postId);
-      const nextIndex = currentIndex < (post?.images.length || 1) - 1 ? currentIndex + 1 : 0;
-      return { ...prev, [postId]: nextIndex };
-    });
-  }, [posts]);
-
-  const validateForm = useCallback(() => {
-    const errors = { name: '', surname: '', status: '', birthday: '' };
-    let isValid = true;
-
-    if (!formData.name.trim()) {
-      errors.name = 'Имя обязательно';
-      isValid = false;
-    } else if (formData.name.length > 50) {
-      errors.name = 'Имя не должно превышать 50 символов';
-      isValid = false;
+  const handlePostSubmit = async () => {
+    const success = await handleCreatePost();
+    if (success) {
+      toggleCreatePost();
     }
+  };
 
-    if (!formData.surname.trim()) {
-      errors.surname = 'Фамилия обязательна';
-      isValid = false;
-    } else if (formData.surname.length > 50) {
-      errors.surname = 'Фамилия не должна превышать 50 символов';
-      isValid = false;
+  const handleCommentSubmit = async (postId: string) => {
+    const commentText = commentInputs[postId] || '';
+    const result = await handleAddComment(postId, commentText);
+    
+    if (result?.success) {
+      clearCommentInput(postId);
+      setVisibleComments((prev: { [postId: string]: number }) => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+    } else if (result?.error) {
+      setCommentErrors((prev: { [postId: string]: string }) => ({ ...prev, [postId]: result.error }));
     }
+  };
 
-    if (formData.status.length > 200) {
-      errors.status = 'Статус не должен превышать 200 символов';
-      isValid = false;
+  const handleReplySubmit = async (postId: string, commentId: string) => {
+    const replyText = replyInputs[commentId] || '';
+    const result = await handleAddReply(postId, commentId, replyText);
+    
+    if (result?.success) {
+      clearReplyInput(commentId);
+      toggleReplyForm(commentId);
+    } else if (result?.error) {
+      setReplyErrors((prev: { [commentId: string]: string }) => ({ ...prev, [commentId]: result.error }));
     }
+  };
 
-    if (!formData.birthday) {
-      errors.birthday = 'Дата рождения обязательна';
-      isValid = false;
-    } else {
-      const age = calculateAge(formData.birthday);
-      if (age < 13) {
-        errors.birthday = 'Пользователь должен быть старше 13 лет';
-        isValid = false;
-      }
-    }
-
-    setFormErrors(errors);
-    return isValid;
-  }, [formData]);
-
-  const validatePost = useCallback(() => {
-    const errors = { content: '', images: '' };
-    let isValid = true;
-
-    if (newPost.content.length > 500) {
-      errors.content = 'Текст не должен превышать 500 символов';
-      isValid = false;
-    }
-
-    if (newPost.images.length > 10) {
-      errors.images = 'Максимум 10 изображений';
-      isValid = false;
-    }
-
-    if (!newPost.content.trim() && newPost.images.length === 0) {
-      errors.content = 'Добавьте текст или изображения';
-      isValid = false;
-    }
-
-    setPostErrors(errors);
-    return isValid;
-  }, [newPost]);
-
-  const validateComment = useCallback((text: string) => {
-    if (!text.trim()) return 'Комментарий не может быть пустым';
-    if (text.length > 200) return 'Комментарий не должен превышать 200 символов';
-    return '';
-  }, []);
-
-  const handleAvatarSave = useCallback(async () => {
-    if (!avatarFile || !isOwnProfile) return;
+  const handleAvatarSubmit = async () => {
     try {
-      const uploadResponse = await fetch('http://localhost:8000/api/v1/users/avatar/upload-url', {
-        method: 'GET',
-        credentials: 'include',
-      });
-      const uploadData = await uploadResponse.json();
-      if (!uploadResponse.ok) throw new Error(uploadData.detail || 'Ошибка получения URL для загрузки');
-
-      await fetch(uploadData.upload_url, {
-        method: 'PUT',
-        body: avatarFile,
-      });
-
-      const saveResponse = await fetch('http://localhost:8000/api/v1/users/avatar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ object_name: uploadData.object_name }),
-      });
-      const saveData = await saveResponse.json();
-      if (!saveResponse.ok) throw new Error(saveData.detail || 'Ошибка сохранения аватара');
-
-      const newAvatarUrl = saveData.avatar_url || uploadData.object_name;
-      setProfile((prev) => (prev ? { ...prev, avatar_url: newAvatarUrl } : prev));
-      setUser((prev) => (prev ? { ...prev, avatar_url: newAvatarUrl } : prev));
-      setIsEditingAvatar(false);
-      setAvatarFile(null);
-      setIsAvatarButtonVisible(false);
+      await handleAvatarSave();
+      toggleAvatarEdit();
     } catch (err: any) {
-      setError(err.message || 'Ошибка сохранения аватара');
+      setErrorState(err.message);
     }
-  }, [avatarFile, isOwnProfile, setUser]);
+  };
 
-  const handleProfileSave = useCallback(async () => {
-    if (!validateForm()) return;
-
-    try {
-      const updateData = {
-        name: formData.name,
-        surname: formData.surname,
-        status: formData.status || null,
-        birthday: formData.birthday,
-        gender: formData.gender || null,
-      };
-      const response = await fetch('http://localhost:8000/api/v1/users/me', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(updateData),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Ошибка обновления профиля');
-
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              name: data.name,
-              surname: data.surname,
-              status: data.status || null,
-              birthday: data.birthday,
-              gender: data.gender || null,
-              avatar_url: data.avatar_url || prev.avatar_url,
-            }
-          : prev
-      );
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              name: data.name,
-              surname: data.surname,
-              status: data.status || null,
-              birthday: data.birthday,
-              gender: data.gender || null,
-              avatar_url: data.avatar_url || prev.avatar_url,
-            }
-          : prev
-      );
-      setIsEditingProfile(false);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка сохранения профиля');
-    }
-  }, [formData, validateForm, setUser]);
-
-  const handleCreatePost = useCallback(async () => {
-    if (!validatePost()) return;
-
-    try {
-      const postData = {
-        text: newPost.content.trim() || null,
-        images: newPost.imageUrls,
-      };
-      const response = await fetch('http://localhost:8000/api/v1/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(postData),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Ошибка создания поста');
-
-      setPosts((prev) => [
-        {
-          id: data.post_id,
-          text: data.text,
-          images: data.images,
-          created_at: data.created_at,
-          likes_count: 0,
-          comments_count: 0,
-          comments: [],
-          likes: [],
-        },
-        ...prev,
-      ]);
-      setNewPost({ content: '', images: [], imageUrls: [] });
-      setIsCreatingPost(false);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка создания поста');
-    }
-  }, [newPost, validatePost]);
-
-  const handleLikePost = useCallback(
-    async (postId: string) => {
-      if (!user) {
-        setError('Авторизуйтесь, чтобы лайкать посты');
-        return;
-      }
-      try {
-        const response = await fetch(`http://localhost:8000/api/v1/posts/like/${postId}`, {
-          method: 'POST',
-          credentials: 'include',
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Ошибка при добавлении лайка');
-
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === postId
-              ? {
-                  ...post,
-                  likes_count: post.likes_count + 1,
-                  likes: [...post.likes, user.id],
-                }
-              : post
-          )
-        );
-      } catch (err: any) {
-        if (err.message.includes('User already liked this post')) {
-          const response = await fetch(`http://localhost:8000/api/v1/posts/like/${postId}`, {
-            method: 'DELETE',
-            credentials: 'include',
-          });
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.detail || 'Ошибка при удалении лайка');
-          setPosts((prev) =>
-            prev.map((post) =>
-              post.id === postId
-                ? {
-                    ...post,
-                    likes_count: post.likes_count - 1,
-                    likes: post.likes.filter((id) => id !== user.id),
-                  }
-                : post
-            )
-          );
-        } else {
-          setError(err.message || 'Ошибка при изменении лайка');
-        }
-      }
-    },
-    [user]
-  );
-
-  const handleAddComment = useCallback(
-    async (postId: string) => {
-      if (!user) {
-        setError('Авторизуйтесь, чтобы комментировать');
-        return;
-      }
-      const commentText = commentInputs[postId] || '';
-      const error = validateComment(commentText);
-      if (error) {
-        setCommentErrors((prev) => ({ ...prev, [postId]: error }));
-        return;
-      }
-
-      try {
-        const response = await fetch(`http://localhost:8000/api/v1/posts/comment/${postId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ text: commentText, parent_id: null }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Ошибка добавления комментария');
-
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === postId
-              ? {
-                  ...post,
-                  comments: [
-                    {
-                      id: data.id,
-                      user_id: data.user_id,
-                      text: data.text,
-                      created_at: data.created_at,
-                      replies: [],
-                    },
-                    ...post.comments,
-                  ],
-                  comments_count: post.comments_count + 1,
-                }
-              : post
-          )
-        );
-        setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
-        setCommentErrors((prev) => ({ ...prev, [postId]: '' }));
-        setVisibleComments((prev) => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
-      } catch (err: any) {
-        setCommentErrors((prev) => ({ ...prev, [postId]: err.message || 'Ошибка добавления комментария' }));
-      }
-    },
-    [user, commentInputs, validateComment]
-  );
-
-  const handleAddReply = useCallback(
-    async (postId: string, commentId: string) => {
-      if (!user) {
-        setError('Авторизуйтесь, чтобы отвечать на комментарии');
-        return;
-      }
-      const replyText = replyInputs[commentId] || '';
-      const error = validateComment(replyText);
-      if (error) {
-        setReplyErrors((prev) => ({ ...prev, [commentId]: error }));
-        return;
-      }
-
-      try {
-        const response = await fetch(`http://localhost:8000/api/v1/posts/comment/${postId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({ text: replyText, parent_id: commentId }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Ошибка добавления ответа');
-
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === postId
-              ? {
-                  ...post,
-                  comments: post.comments.map((comment) =>
-                    comment.id === commentId
-                      ? {
-                          ...comment,
-                          replies: [
-                            {
-                              id: data.id,
-                              user_id: data.user_id,
-                              text: data.text,
-                              created_at: data.created_at,
-                              replies: [],
-                            },
-                            ...comment.replies,
-                          ],
-                        }
-                      : comment
-                  ),
-                  comments_count: post.comments_count + 1,
-                }
-              : post
-          )
-        );
-        setReplyInputs((prev) => ({ ...prev, [commentId]: '' }));
-        setReplyErrors((prev) => ({ ...prev, [commentId]: '' }));
-        setReplyFormVisible((prev) => ({ ...prev, [commentId]: false }));
-      } catch (err: any) {
-        setReplyErrors((prev) => ({ ...prev, [commentId]: err.message || 'Ошибка добавления ответа' }));
-      }
-    },
-    [user, replyInputs, validateComment]
-  );
-
-  const handleImageClick = useCallback((imageUrl: string, index: number) => {
-    setSelectedImage(imageUrl);
-    setCurrentImageIndex(index);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedImage(null);
-    setCurrentImageIndex(0);
-  }, []);
-
-  const handlePrevImage = useCallback(() => {
-    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : allPhotos.length - 1));
-    setSelectedImage(allPhotos[currentImageIndex > 0 ? currentImageIndex - 1 : allPhotos.length - 1]);
-  }, [allPhotos, currentImageIndex]);
-
-  const handleNextImage = useCallback(() => {
-    setCurrentImageIndex((prev) => (prev < allPhotos.length - 1 ? prev + 1 : 0));
-    setSelectedImage(allPhotos[currentImageIndex < allPhotos.length - 1 ? currentImageIndex + 1 : 0]);
-  }, [allPhotos, currentImageIndex]);
-
+  // Загрузка данных при монтировании
   useEffect(() => {
     if (!authLoading && user) {
       fetchProfile();
@@ -662,43 +250,25 @@ const ProfilePage: React.FC = () => {
     }
   }, [fetchProfile, fetchPosts, authLoading, user]);
 
+  // Обновление формы при изменении профиля
+  useEffect(() => {
+    if (profile && isEditingProfile) {
+      resetForm({
+        name: profile.name,
+        surname: profile.surname,
+        status: profile.status || '',
+        birthday: profile.birthday,
+        gender: profile.gender || '',
+      });
+    }
+  }, [profile, isEditingProfile, resetForm]);
+
   if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen bg-rose-50 flex items-center justify-center p-6 font-sans">
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-xl">
-          <svg
-            className="animate-spin h-12 w-12 text-rose-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          <p className="mt-4 text-lg text-gray-600">Загрузка профиля...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (error || !profile) {
-    return (
-      <div className="min-h-screen bg-rose-50 flex items-center justify-center p-6 font-sans">
-        <div className="bg-white rounded-2xl shadow-xl p-12 max-w-lg w-full text-center">
-          <p className="text-red-500 text-lg">{error || 'Профиль не найден'}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="mt-4 bg-rose-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200"
-          >
-            Вернуться на главную
-          </button>
-        </div>
-      </div>
-    );
+    return <ErrorDisplay error={error} />;
   }
 
   return (
@@ -714,18 +284,11 @@ const ProfilePage: React.FC = () => {
           isAvatarButtonVisible={isAvatarButtonVisible}
           handleAvatarEditToggle={handleAvatarEditToggle}
         />
+        
         <PhotosFeed allPhotos={allPhotos} handleImageClick={handleImageClick} />
-        {isOwnProfile && (
-          <div className="px-8 pb-8">
-            <button
-              onClick={handleCreatePostToggle}
-              className="bg-rose-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-rose-700 transition-transform duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-rose-200"
-              aria-label="Создать новый пост"
-            >
-              Создать пост
-            </button>
-          </div>
-        )}
+        
+        <CreatePostButton isOwnProfile={isOwnProfile} onClick={handleCreatePostToggle} />
+        
         <PostsFeed
           posts={posts}
           profile={profile}
@@ -738,28 +301,30 @@ const ProfilePage: React.FC = () => {
           commentErrors={commentErrors}
           replyErrors={replyErrors}
           handleLikePost={handleLikePost}
-          handleCommentChange={handleCommentChange}
-          handleReplyChange={handleReplyChange}
+          handleCommentChange={setCommentInput}
+          handleReplyChange={setReplyInput}
           toggleReplyForm={toggleReplyForm}
           toggleComments={toggleComments}
           loadMoreComments={loadMoreComments}
-          handlePrevPostImage={handlePrevPostImage}
-          handleNextPostImage={handleNextPostImage}
+          handlePrevPostImage={(postId) => handlePrevPostImage(postId, posts)}
+          handleNextPostImage={(postId) => handleNextPostImage(postId, posts)}
           handleImageClick={handleImageClick}
-          handleAddComment={handleAddComment}
-          handleAddReply={handleAddReply}
+          handleAddComment={handleCommentSubmit}
+          handleAddReply={handleReplySubmit}
           allPhotos={allPhotos}
           setCurrentImageIndices={setCurrentImageIndices}
         />
       </div>
+
       <ImageModal
         selectedImage={selectedImage}
         allPhotos={allPhotos}
         currentImageIndex={currentImageIndex}
         handleCloseModal={handleCloseModal}
-        handlePrevImage={handlePrevImage}
-        handleNextImage={handleNextImage}
+        handlePrevImage={() => handlePrevImage(allPhotos)}
+        handleNextImage={() => handleNextImage(allPhotos)}
       />
+
       <AvatarEditor
         isEditingAvatar={isEditingAvatar}
         isOwnProfile={isOwnProfile}
@@ -767,8 +332,9 @@ const ProfilePage: React.FC = () => {
         error={error}
         handleAvatarEditToggle={handleAvatarEditToggle}
         handleAvatarChange={handleAvatarChange}
-        handleAvatarSave={handleAvatarSave}
+        handleAvatarSave={handleAvatarSubmit}
       />
+
       <ProfileEditor
         isEditingProfile={isEditingProfile}
         isOwnProfile={isOwnProfile}
@@ -777,8 +343,9 @@ const ProfilePage: React.FC = () => {
         error={error}
         handleProfileEditToggle={handleProfileEditToggle}
         handleFormChange={handleFormChange}
-        handleProfileSave={handleProfileSave}
+        handleProfileSave={handleFormSubmit}
       />
+
       <CreatePostForm
         isCreatingPost={isCreatingPost}
         isOwnProfile={isOwnProfile}
@@ -789,7 +356,7 @@ const ProfilePage: React.FC = () => {
         handlePostChange={handlePostChange}
         handlePostImagesChange={handlePostImagesChange}
         removePostImage={removePostImage}
-        handleCreatePost={handleCreatePost}
+        handleCreatePost={handlePostSubmit}
       />
     </div>
   );
