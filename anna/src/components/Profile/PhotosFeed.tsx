@@ -11,9 +11,16 @@ const PhotosFeed: React.FC<PhotosFeedProps> = ({ allPhotos, handleImageClick }) 
   return (
     <div className="px-8 pb-8">
       <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
+      <svg xmlns="http://www.w3.org/2000/svg" 
+          className="h-8 w-6 text-rose-600" 
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor" 
+          strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" 
+              d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v9a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z" />
+        <circle cx="12" cy="13" r="3" />
+      </svg>
         Фотографии ({allPhotos.length})
       </h2>
       
