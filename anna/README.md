@@ -1,70 +1,145 @@
-# Getting Started with Create React App
+# AnnA - Социальная сеть
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Современное веб-приложение социальной сети, построенное на React с TypeScript и Tailwind CSS.
 
-## Available Scripts
+## 🚀 Основные возможности
 
-In the project directory, you can run:
+- **Профили пользователей** с возможностью редактирования
+- **Посты** с поддержкой текста и изображений
+- **Лайки и комментарии** с полной функциональностью
+- **Загрузка изображений** с предварительным просмотром
+- **Адаптивный дизайн** для всех устройств
+- **Современный UI/UX** с анимациями и переходами
 
-### `npm start`
+## 🛠️ Технологии
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React 18 + TypeScript
+- **Стилизация**: Tailwind CSS
+- **Состояние**: React Hooks
+- **Маршрутизация**: React Router
+- **Анимации**: CSS Animations + Framer Motion
+- **API**: REST API с fetch
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## ✨ Последние улучшения UI/UX
 
-### `npm test`
+### 1. Исправление проблем с лайками и комментариями
+- ✅ **Лайки теперь сохраняются** при обновлении страницы
+- ✅ **Комментарии корректно отображаются** с правильной логикой
+- ✅ **Синхронизация состояния** с сервером
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 2. Улучшенный дизайн постов
+- 🎨 **Современные карточки** с тенями и скруглениями
+- 🔴 **Красная заливка сердца** для лайкнутых постов
+- 📱 **Адаптивная галерея изображений** с навигацией
+- 💬 **Улучшенные комментарии** с аватарами и ответами
 
-### `npm run build`
+### 3. Обновленный заголовок профиля
+- 🌈 **Градиентный фон** с декоративными элементами
+- 👤 **Увеличенный аватар** с hover эффектами
+- 🏷️ **Информативные бейджи** для пола и возраста
+- ✏️ **Стильные кнопки редактирования**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 4. Улучшенная форма создания постов
+- 📝 **Большое поле ввода** с подсчетом символов
+- 🖼️ **Drag & Drop зона** для изображений
+- 🎯 **Предварительный просмотр** выбранных файлов
+- 🚀 **Градиентные кнопки** с анимациями
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 5. Современный просмотр изображений
+- 🔍 **Полноэкранный режим** с backdrop blur
+- ⬅️➡️ **Навигация по изображениям** с hover эффектами
+- 📱 **Миниатюры всех фото** внизу модала
+- 📊 **Информация о размере** и формате
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 6. Улучшенные компоненты загрузки и ошибок
+- ⚡ **Анимированный спиннер** с градиентным фоном
+- ❌ **Информативные страницы ошибок** с советами
+- 🎭 **Плавные переходы** между состояниями
 
-### `npm run eject`
+### 7. CSS анимации и эффекты
+- ✨ **Fade-in анимации** для постов и комментариев
+- 🎪 **Scale эффекты** для кнопок и карточек
+- 🌊 **Hover трансформации** для интерактивных элементов
+- 🎨 **Кастомные скроллбары** в стиле приложения
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🎯 Ключевые особенности
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Лайки
+- Сердце заполняется красным цветом при лайке
+- Состояние сохраняется при обновлении страницы
+- Анимированные переходы и hover эффекты
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Комментарии
+- Иерархическая структура с ответами
+- Аватары пользователей с инициалами
+- Форма добавления с валидацией
+- Пагинация для больших списков
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Изображения
+- Поддержка множественных изображений
+- Галерея с навигацией и индикаторами
+- Модальное окно просмотра
+- Адаптивные размеры для мобильных устройств
 
-## Learn More
+## 🚀 Запуск проекта
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+# Установка зависимостей
+npm install
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# Запуск в режиме разработки
+npm start
 
-### Code Splitting
+# Сборка для продакшена
+npm run build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 📱 Адаптивность
 
-### Analyzing the Bundle Size
+Приложение полностью адаптивно и оптимизировано для:
+- 📱 Мобильные устройства (320px+)
+- 📱 Планшеты (768px+)
+- 💻 Десктопы (1024px+)
+- 🖥️ Большие экраны (1440px+)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🎨 Цветовая схема
 
-### Making a Progressive Web App
+Основная палитра построена на розовых тонах:
+- **Primary**: `#f43f5e` (Rose-600)
+- **Secondary**: `#e11d48` (Rose-700)
+- **Accent**: `#fb7185` (Rose-400)
+- **Background**: `#fdf2f8` (Rose-50)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 🔧 Структура проекта
 
-### Advanced Configuration
+```
+src/
+├── components/          # React компоненты
+│   ├── Profile/        # Компоненты профиля
+│   └── types/          # TypeScript типы
+├── hooks/              # Кастомные React хуки
+├── pages/              # Страницы приложения
+├── utils/              # Утилиты и API
+└── assets/             # Статические ресурсы
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 🚀 Планы на будущее
 
-### Deployment
+- [ ] Темная тема
+- [ ] Уведомления в реальном времени
+- [ ] Поиск по пользователям и постам
+- [ ] Подписки и друзья
+- [ ] PWA функциональность
+- [ ] Многоязычность
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## 🤝 Вклад в проект
 
-### `npm run build` fails to minify
+Мы приветствуем вклад в развитие проекта! Пожалуйста, создавайте issues и pull requests.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 📄 Лицензия
+
+MIT License - подробности в файле [LICENSE](LICENSE).
+
+---
+
+**AnnA** - современная социальная сеть для общения и обмена контентом! 🚀

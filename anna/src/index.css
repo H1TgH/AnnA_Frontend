@@ -2,35 +2,227 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-.animate-scale-in {
-  animation: scaleIn 0.3s ease-in-out;
+/* Кастомные CSS анимации */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Стили для скроллбара */
-.scrollbar-thin {
-  scrollbar-width: thin;
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(244, 63, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.8), 0 0 30px rgba(244, 63, 94, 0.6);
+  }
+}
+
+/* Применение анимаций */
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.8s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Плавные переходы для всех элементов */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Кастомные скроллбары */
 .scrollbar-thin::-webkit-scrollbar {
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #f3f4f6;
+  border-radius: 3px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #e7d8d8;
-  border-radius: 4px;
+  background: #fecdd3;
+  border-radius: 3px;
 }
+
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #d1bcbc;
+  background: #fb7185;
+}
+
+/* Улучшенные фокусы для доступности */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.3);
+}
+
+/* Градиентные тексты */
+.text-gradient {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Стеклянный эффект */
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Неоморфизм */
+.neomorphic {
+  background: #f0f0f3;
+  box-shadow: 
+    20px 20px 60px #d1d9e6,
+    -20px -20px 60px #ffffff;
+}
+
+.neomorphic-inset {
+  background: #f0f0f3;
+  box-shadow: 
+    inset 20px 20px 60px #d1d9e6,
+    inset -20px -20px 60px #ffffff;
+}
+
+/* Hover эффекты */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Анимация загрузки */
+.loading-dots {
+  display: inline-block;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0%, 20% {
+    content: '';
+  }
+  40% {
+    content: '.';
+  }
+  60% {
+    content: '..';
+  }
+  80%, 100% {
+    content: '...';
+  }
+}
+
+/* Улучшенные тени */
+.shadow-soft {
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-medium {
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-strong {
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Адаптивные размеры */
+@media (max-width: 640px) {
+  .animate-fade-in {
+    animation-duration: 0.4s;
+  }
+  
+  .animate-scale-in {
+    animation-duration: 0.3s;
+  }
+}
+
+/* Темная тема (если понадобится в будущем) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
 }

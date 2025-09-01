@@ -55,12 +55,12 @@ export const useDataFetching = (
       setPosts(data.posts.map((post: any) => ({
         id: post.id,
         text: post.text,
-        images: post.images,
+        images: post.images || [],
         created_at: post.created_at,
-        likes_count: post.likes_count,
-        comments_count: post.comments_count,
+        likes_count: post.likes_count || 0,
+        comments_count: post.comments_count || 0,
         comments: post.comments || [],
-        likes: post.likes || [],
+        likes: post.likes || [], // Массив ID пользователей, которые поставили лайк
       })));
     } catch (err: any) {
       setErrorState(err.message || 'Ошибка загрузки постов');

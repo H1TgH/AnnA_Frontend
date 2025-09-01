@@ -211,11 +211,16 @@ const ProfilePage: React.FC = () => {
 
   const handleCommentSubmit = async (postId: string) => {
     const commentText = commentInputs[postId] || '';
+    if (!commentText.trim()) return;
+    
     const result = await handleAddComment(postId, commentText);
     
     if (result?.success) {
       clearCommentInput(postId);
-      setVisibleComments((prev: { [postId: string]: number }) => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+      // Устанавливаем количество видимых комментариев, если комментарии еще не открыты
+      if (!visibleComments[postId] || visibleComments[postId] === 0) {
+        setVisibleComments((prev: { [postId: string]: number }) => ({ ...prev, [postId]: 3 }));
+      }
     } else if (result?.error) {
       setCommentErrors((prev: { [postId: string]: string }) => ({ ...prev, [postId]: result.error }));
     }
@@ -223,6 +228,8 @@ const ProfilePage: React.FC = () => {
 
   const handleReplySubmit = async (postId: string, commentId: string) => {
     const replyText = replyInputs[commentId] || '';
+    if (!replyText.trim()) return;
+    
     const result = await handleAddReply(postId, commentId, replyText);
     
     if (result?.success) {

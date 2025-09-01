@@ -27,7 +27,7 @@ export const useComments = () => {
   const toggleComments = useCallback((postId: string) => {
     setVisibleComments((prev: { [postId: string]: number }) => ({
       ...prev,
-      [postId]: prev[postId] === undefined || prev[postId] === 0 ? 3 : 0,
+      [postId]: prev[postId] && prev[postId] > 0 ? 0 : 3,
     }));
   }, []);
 
