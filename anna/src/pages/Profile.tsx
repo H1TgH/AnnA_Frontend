@@ -1,58 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
-
-interface UserProfile {
-  id: string;
-  name: string;
-  surname: string;
-  email: string;
-  birthday: string;
-  gender: string | null;
-  avatar_url: string | null;
-  status: string | null;
-}
-
-interface Comment {
-  id: string;
-  user_id: string;
-  text: string;
-  created_at: string;
-  replies: Comment[];
-}
-
-interface Post {
-  id: string;
-  text: string | null;
-  images: string[];
-  created_at: string;
-  likes_count: number;
-  comments_count: number;
-  comments: Comment[];
-  likes: string[];
-}
-
-const calculateAge = (birthday: string): number => {
-  const birthDate = new Date(birthday);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-};
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+import { UserProfile, Post, calculateAge } from '../components/types/Profile';
+import ProfileHeader from '../components/Profile/ProfileHeader';
+import AvatarEditor from '../components/Profile/AvatarEditor';
+import ProfileEditor from '../components/Profile/ProfileEditor';
+import CreatePostForm from '../components/Profile/CreatePostForm';
+import PhotosFeed from '../components/Profile/PhotosFeed';
+import PostsFeed from '../components/Profile/PostsFeed';
+import ImageModal from '../components/Profile/ImageModal';
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -100,6 +56,10 @@ const ProfilePage: React.FC = () => {
   const [replyErrors, setReplyErrors] = useState<{ [commentId: string]: string }>({});
   const [visibleComments, setVisibleComments] = useState<{ [postId: string]: number }>({});
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [postId: string]: number }>({});
+
+  const allPhotos = useMemo(() => {
+    return posts.reduce((acc: string[], post) => [...acc, ...post.images], []);
+  }, [posts]);
 
   const fetchProfile = useCallback(async () => {
     if (!id || !user) {
@@ -164,13 +124,6 @@ const ProfilePage: React.FC = () => {
       setError(err.message || 'Ошибка загрузки постов');
     }
   }, [id]);
-
-  useEffect(() => {
-    if (!authLoading && user) {
-      fetchProfile();
-      fetchPosts();
-    }
-  }, [fetchProfile, fetchPosts, authLoading, user]);
 
   const handleAvatarClick = useCallback(() => {
     if (isOwnProfile) {
@@ -682,10 +635,6 @@ const ProfilePage: React.FC = () => {
     [user, replyInputs, validateComment]
   );
 
-  const allPhotos = useMemo(() => {
-    return posts.reduce((acc: string[], post) => [...acc, ...post.images], []);
-  }, [posts]);
-
   const handleImageClick = useCallback((imageUrl: string, index: number) => {
     setSelectedImage(imageUrl);
     setCurrentImageIndex(index);
@@ -705,6 +654,13 @@ const ProfilePage: React.FC = () => {
     setCurrentImageIndex((prev) => (prev < allPhotos.length - 1 ? prev + 1 : 0));
     setSelectedImage(allPhotos[currentImageIndex < allPhotos.length - 1 ? currentImageIndex + 1 : 0]);
   }, [allPhotos, currentImageIndex]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetchProfile();
+      fetchPosts();
+    }
+  }, [fetchProfile, fetchPosts, authLoading, user]);
 
   if (authLoading || isLoading) {
     return (
@@ -748,147 +704,17 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-rose-50 p-6 sm:p-12 font-sans pt-20">
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
-        {/* Cover Image */}
-        <div className="h-48 bg-gradient-to-r from-rose-400 to-rose-600 relative">
-          <div className="absolute -bottom-16 left-8 transform translate-y-0">
-            <div
-              className={`w-32 h-32 rounded-full bg-gray-200 border-4 border-white overflow-hidden relative ${isOwnProfile ? 'cursor-pointer' : ''}`}
-              onClick={handleAvatarClick}
-              onMouseEnter={() => isOwnProfile && setIsHoveringAvatar(true)}
-              onMouseLeave={() => isOwnProfile && setIsHoveringAvatar(false)}
-            >
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex items-center justify-center h-full bg-gray-300">
-                  <span className="text-rose-600 text-4xl font-bold">{profile.name[0]}</span>
-                </div>
-              )}
-              {isOwnProfile && isHoveringAvatar && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-10 w-10 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                    />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* Profile Info */}
-        <div className="pt-20 pb-8 px-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-800">{`${profile.name} ${profile.surname}`}</h1>
-              {profile.status && (
-                <p className="text-gray-600 italic mt-2 max-w-md">{profile.status}</p>
-              )}
-            </div>
-            {isOwnProfile && (
-              <button
-                onClick={handleProfileEditToggle}
-                className="bg-rose-600 text-white p-2 rounded-full hover:bg-rose-700 transition-transform duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-rose-200"
-                title="Редактировать профиль"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:gap-6">
-            <div className="flex items-center text-gray-600">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-              <span>
-                {profile.gender === 'MALE' ? 'Мужской' : profile.gender === 'FEMALE' ? 'Женский' : 'Не указан'}
-              </span>
-            </div>
-            <div className="flex items-center text-gray-600 mt-2 sm:mt-0">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span>Возраст: {calculateAge(profile.birthday)}</span>
-            </div>
-          </div>
-          {isOwnProfile && isAvatarButtonVisible && (
-            <div className="mt-4">
-              <button
-                onClick={handleAvatarEditToggle}
-                className="bg-rose-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-rose-700 transition-transform duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-rose-200"
-              >
-                Изменить аватар
-              </button>
-            </div>
-          )}
-        </div>
-        {/* Photos Feed */}
-        {allPhotos.length > 0 && (
-          <div className="px-8 pb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Фотографии</h2>
-            <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-gray-100">
-              {allPhotos.map((photo, index) => (
-                <img
-                  key={index}
-                  src={photo}
-                  alt={`Фотография ${index + 1}`}
-                  className="h-24 w-24 object-cover rounded-lg cursor-pointer hover:shadow-lg hover:scale-105 transition-all duration-200"
-                  onClick={() => handleImageClick(photo, index)}
-                  role="button"
-                  aria-label={`Открыть фотографию ${index + 1}`}
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && handleImageClick(photo, index)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-        {/* Create Post Button */}
+        <ProfileHeader
+          profile={profile}
+          isOwnProfile={isOwnProfile}
+          isHoveringAvatar={isHoveringAvatar}
+          setIsHoveringAvatar={setIsHoveringAvatar}
+          handleAvatarClick={handleAvatarClick}
+          handleProfileEditToggle={handleProfileEditToggle}
+          isAvatarButtonVisible={isAvatarButtonVisible}
+          handleAvatarEditToggle={handleAvatarEditToggle}
+        />
+        <PhotosFeed allPhotos={allPhotos} handleImageClick={handleImageClick} />
         {isOwnProfile && (
           <div className="px-8 pb-8">
             <button
@@ -900,583 +726,71 @@ const ProfilePage: React.FC = () => {
             </button>
           </div>
         )}
-        {/* Posts Feed */}
-        <div className="px-8 pb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Посты</h2>
-          {posts.length === 0 ? (
-            <p className="text-gray-600">Постов пока нет</p>
-          ) : (
-            <div className="space-y-6">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="bg-white border-2 border-gray-200 rounded-2xl p-6 animate-fade-in"
-                  role="article"
-                  aria-label={`Пост от ${formatDate(post.created_at)}`}
-                >
-                  {post.text && <p className="text-gray-800 mb-4">{post.text}</p>}
-                  {post.images.length > 0 && (
-                    <div className="relative">
-                      <img
-                        src={post.images[currentImageIndices[post.id] || 0]}
-                        alt={`Пост ${post.id} изображение ${currentImageIndices[post.id] || 0 + 1}`}
-                        className="w-full max-h-96 object-cover rounded-lg cursor-pointer"
-                        onClick={() => handleImageClick(post.images[currentImageIndices[post.id] || 0], allPhotos.indexOf(post.images[currentImageIndices[post.id] || 0]))}
-                        role="button"
-                        aria-label={`Открыть изображение поста ${post.id}`}
-                        tabIndex={0}
-                        onKeyDown={(e) => e.key === 'Enter' && handleImageClick(post.images[currentImageIndices[post.id] || 0], allPhotos.indexOf(post.images[currentImageIndices[post.id] || 0]))}
-                      />
-                      {post.images.length > 1 && (
-                        <>
-                          <button
-                            onClick={() => handlePrevPostImage(post.id)}
-                            className="absolute left-0 top-1/2 -translate-y-1/2 bg-rose-600 text-white p-2 rounded-full hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
-                            aria-label="Предыдущее изображение"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleNextPostImage(post.id)}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 bg-rose-600 text-white p-2 rounded-full hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
-                            aria-label="Следующее изображение"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                          <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-sm px-2 py-1 rounded">
-                            {`${(currentImageIndices[post.id] || 0) + 1}/${post.images.length}`}
-                          </div>
-                          <div className="absolute bottom-2 right-2 flex gap-1">
-                            {post.images.map((_, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setCurrentImageIndices((prev) => ({ ...prev, [post.id]: index }))}
-                                className={`w-2 h-2 rounded-full ${index === (currentImageIndices[post.id] || 0) ? 'bg-rose-600' : 'bg-gray-400'}`}
-                                aria-label={`Перейти к изображению ${index + 1}`}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <p className="text-gray-500 text-sm mt-4">{formatDate(post.created_at)}</p>
-                  {/* Likes and Comments */}
-                  <div className="mt-4 flex items-center gap-4">
-                    <button
-                      onClick={() => handleLikePost(post.id)}
-                      className={`flex items-center gap-2 text-rose-600 hover:bg-rose-100 p-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={!user}
-                      aria-label="Лайкнуть пост"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill={post.likes.includes(user?.id || '') ? 'currentColor' : 'none'}
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
-                      <span>{post.likes_count}</span>
-                    </button>
-                    <button
-                      onClick={() => toggleComments(post.id)}
-                      className="flex items-center gap-2 text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-200"
-                      aria-label={visibleComments[post.id] ? 'Скрыть комментарии' : 'Показать комментарии'}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h6"
-                        />
-                      </svg>
-                      <span>{post.comments_count}</span>
-                    </button>
-                  </div>
-                  {/* Comments Section */}
-                  {visibleComments[post.id] > 0 && (
-                    <div className="mt-4 animate-fade-in">
-                      {post.comments.length > 0 ? (
-                        <div className="space-y-4">
-                          {post.comments.slice(0, visibleComments[post.id]).map((comment) => (
-                            <div key={comment.id} className="animate-fade-in" role="comment">
-                              <div className="flex items-start gap-2">
-                                <div className="flex-1">
-                                  <p className="text-gray-800 font-medium">{comment.user_id === profile.id ? `${profile.name} ${profile.surname}` : comment.user_id}</p>
-                                  <p className="text-gray-600">{comment.text}</p>
-                                  <p className="text-gray-500 text-sm">{formatDate(comment.created_at)}</p>
-                                  {user && (
-                                    <button
-                                      onClick={() => toggleReplyForm(comment.id)}
-                                      className="text-rose-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-rose-200"
-                                      aria-label={`Ответить на комментарий ${comment.user_id}`}
-                                    >
-                                      Ответить
-                                    </button>
-                                  )}
-                                  {replyFormVisible[comment.id] && user && (
-                                    <div className="mt-2 ml-6 animate-scale-in">
-                                      <textarea
-                                        value={replyInputs[comment.id] || ''}
-                                        onChange={(e) => handleReplyChange(comment.id, e.target.value)}
-                                        placeholder={`Ответить...`}
-                                        className="w-full p-2 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                                        rows={2}
-                                        maxLength={200}
-                                        aria-label={`Поле для ответа на комментарий`}
-                                      />
-                                      {replyErrors[comment.id] && (
-                                        <p className="text-red-500 text-sm mt-1">{replyErrors[comment.id]}</p>
-                                      )}
-                                      <div className="flex justify-end gap-2 mt-2">
-                                        <button
-                                          onClick={() => toggleReplyForm(comment.id)}
-                                          className="text-gray-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-gray-200"
-                                        >
-                                          Отмена
-                                        </button>
-                                        <button
-                                          onClick={() => handleAddReply(post.id, comment.id)}
-                                          className="bg-rose-600 text-white text-sm py-1 px-3 rounded-lg hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
-                                          disabled={!replyInputs[comment.id]?.trim()}
-                                        >
-                                          Отправить
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {comment.replies.length > 0 && (
-                                    <div className="ml-6 mt-2 space-y-2">
-                                      {comment.replies.map((reply) => (
-                                        <div key={reply.id} className="animate-fade-in" role="comment">
-                                          <p className="text-gray-800 font-medium">{reply.user_id === profile.id ? `${profile.name} ${profile.surname}` : reply.user_id}</p>
-                                          <p className="text-gray-600">{reply.text}</p>
-                                          <p className="text-gray-500 text-sm">{formatDate(reply.created_at)}</p>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {post.comments.length > visibleComments[post.id] && (
-                            <button
-                              onClick={() => loadMoreComments(post.id)}
-                              className="text-rose-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-rose-200 mt-2"
-                              aria-label="Показать больше комментариев"
-                            >
-                              Показать еще ({post.comments.length - visibleComments[post.id]})
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-gray-600">Комментариев пока нет</p>
-                      )}
-                      {user && (
-                        <div className="mt-4">
-                          <textarea
-                            value={commentInputs[post.id] || ''}
-                            onChange={(e) => handleCommentChange(post.id, e.target.value)}
-                            placeholder="Написать комментарий..."
-                            className="w-full p-2 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                            rows={2}
-                            maxLength={200}
-                            aria-label="Поле для комментария к посту"
-                          />
-                          {commentErrors[post.id] && (
-                            <p className="text-red-500 text-sm mt-1">{commentErrors[post.id]}</p>
-                          )}
-                          <div className="flex justify-end mt-2">
-                            <button
-                              onClick={() => handleAddComment(post.id)}
-                              className="bg-rose-600 text-white text-sm py-1 px-3 rounded-lg hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-200"
-                              disabled={!commentInputs[post.id]?.trim()}
-                              aria-label="Отправить комментарий"
-                            >
-                              Отправить
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <PostsFeed
+          posts={posts}
+          profile={profile}
+          user={user}
+          currentImageIndices={currentImageIndices}
+          visibleComments={visibleComments}
+          commentInputs={commentInputs}
+          replyInputs={replyInputs}
+          replyFormVisible={replyFormVisible}
+          commentErrors={commentErrors}
+          replyErrors={replyErrors}
+          handleLikePost={handleLikePost}
+          handleCommentChange={handleCommentChange}
+          handleReplyChange={handleReplyChange}
+          toggleReplyForm={toggleReplyForm}
+          toggleComments={toggleComments}
+          loadMoreComments={loadMoreComments}
+          handlePrevPostImage={handlePrevPostImage}
+          handleNextPostImage={handleNextPostImage}
+          handleImageClick={handleImageClick}
+          handleAddComment={handleAddComment}
+          handleAddReply={handleAddReply}
+          allPhotos={allPhotos}
+          setCurrentImageIndices={setCurrentImageIndices}
+        />
       </div>
-
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Просмотр изображения"
-        >
-          <div className="bg-white rounded-2xl p-4 max-w-3xl w-full animate-scale-in">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Фотография</h2>
-              <button
-                onClick={handleCloseModal}
-                className="text-gray-500 hover:text-gray-800 transition-colors"
-                aria-label="Закрыть просмотр изображения"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="relative">
-              <img
-                src={selectedImage}
-                alt="Увеличенное изображение"
-                className="w-full max-h-[80vh] object-contain rounded-lg"
-              />
-              {allPhotos.length > 1 && (
-                <>
-                  <button
-                    onClick={handlePrevImage}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 bg-rose-600 text-white p-3 rounded-full hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
-                    aria-label="Предыдущее изображение"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={handleNextImage}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 bg-rose-600 text-white p-3 rounded-full hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
-                    aria-label="Следующее изображение"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isEditingAvatar && isOwnProfile && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full m-4 animate-scale-in">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Изменить аватар</h2>
-              <button onClick={handleAvatarEditToggle} className="text-gray-500 hover:text-gray-800 transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="avatar" className="text-gray-700 font-medium text-sm">
-                Новый аватар
-              </label>
-              <input
-                id="avatar"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="text-gray-700 text-sm"
-              />
-            </div>
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                onClick={handleAvatarEditToggle}
-                className="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-200"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleAvatarSave}
-                disabled={!avatarFile}
-                className="bg-rose-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 disabled:bg-gray-400"
-              >
-                Сохранить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isEditingProfile && isOwnProfile && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full m-4 animate-scale-in">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Редактировать профиль</h2>
-              <button onClick={handleProfileEditToggle} className="text-gray-500 hover:text-gray-800 transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="name" className="text-gray-700 font-medium text-sm">
-                  Имя
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleFormChange}
-                  className="w-full p-2 mt-1 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                />
-                {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
-              </div>
-              <div>
-                <label htmlFor="surname" className="text-gray-700 font-medium text-sm">
-                  Фамилия
-                </label>
-                <input
-                  id="surname"
-                  name="surname"
-                  type="text"
-                  value={formData.surname}
-                  onChange={handleFormChange}
-                  className="w-full p-2 mt-1 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                />
-                {formErrors.surname && <p className="text-red-500 text-sm mt-1">{formErrors.surname}</p>}
-              </div>
-              <div className="sm:col-span-2">
-                <label htmlFor="status" className="text-gray-700 font-medium text-sm">
-                  Статус
-                </label>
-                <textarea
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleFormChange}
-                  maxLength={200}
-                  placeholder="Ваш статус (до 200 символов)"
-                  className="w-full p-2 mt-1 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                />
-                {formErrors.status && <p className="text-red-500 text-sm mt-1">{formErrors.status}</p>}
-              </div>
-              <div>
-                <label htmlFor="birthday" className="text-gray-700 font-medium text-sm">
-                  Дата рождения
-                </label>
-                <input
-                  id="birthday"
-                  name="birthday"
-                  type="date"
-                  value={formData.birthday}
-                  onChange={handleFormChange}
-                  className="w-full p-2 mt-1 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                />
-                {formErrors.birthday && <p className="text-red-500 text-sm mt-1">{formErrors.birthday}</p>}
-              </div>
-              <div>
-                <label htmlFor="gender" className="text-gray-700 font-medium text-sm">
-                  Пол
-                </label>
-                <select
-                  id="gender"
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleFormChange}
-                  className="w-full p-2 mt-1 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                >
-                  <option value="">Не указан</option>
-                  <option value="MALE">Мужской</option>
-                  <option value="FEMALE">Женский</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                onClick={handleProfileEditToggle}
-                className="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-200"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleProfileSave}
-                className="bg-rose-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200"
-              >
-                Сохранить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isCreatingPost && isOwnProfile && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full m-4 animate-scale-in">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">Создать пост</h2>
-              <button onClick={handleCreatePostToggle} className="text-gray-500 hover:text-gray-800 transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="content" className="text-gray-700 font-medium text-sm">
-                  Текст поста
-                </label>
-                <textarea
-                  id="content"
-                  name="content"
-                  value={newPost.content}
-                  onChange={handlePostChange}
-                  maxLength={500}
-                  placeholder="Что у вас нового? (до 500 символов)"
-                  className="w-full p-2 mt-1 rounded-lg border-2 border-gray-200 focus:outline-none focus:ring-2 focus:border-rose-300 focus:ring-rose-100"
-                  rows={4}
-                  aria-label="Текст поста"
-                />
-                {postErrors.content && <p className="text-red-500 text-sm mt-1">{postErrors.content}</p>}
-              </div>
-              <div>
-                <label htmlFor="images" className="text-gray-700 font-medium text-sm">
-                  Изображения (до 10)
-                </label>
-                <input
-                  id="images"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePostImagesChange}
-                  className="text-gray-700 text-sm mt-1"
-                  disabled={newPost.images.length >= 10}
-                  aria-label="Загрузить изображения для поста"
-                />
-                {postErrors.images && <p className="text-red-500 text-sm mt-1">{postErrors.images}</p>}
-                {newPost.images.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newPost.images.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={URL.createObjectURL(image)}
-                          alt={`Предпросмотр изображения ${index + 1}`}
-                          className="h-16 w-16 object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={() => removePostImage(index)}
-                          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 text-xs hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
-                          aria-label={`Удалить изображение ${index + 1}`}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                onClick={handleCreatePostToggle}
-                className="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-gray-200"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleCreatePost}
-                disabled={!newPost.content.trim() && newPost.images.length === 0}
-                className="bg-rose-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-rose-700 transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-rose-200 disabled:bg-gray-400"
-              >
-                Опубликовать
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImageModal
+        selectedImage={selectedImage}
+        allPhotos={allPhotos}
+        currentImageIndex={currentImageIndex}
+        handleCloseModal={handleCloseModal}
+        handlePrevImage={handlePrevImage}
+        handleNextImage={handleNextImage}
+      />
+      <AvatarEditor
+        isEditingAvatar={isEditingAvatar}
+        isOwnProfile={isOwnProfile}
+        avatarFile={avatarFile}
+        error={error}
+        handleAvatarEditToggle={handleAvatarEditToggle}
+        handleAvatarChange={handleAvatarChange}
+        handleAvatarSave={handleAvatarSave}
+      />
+      <ProfileEditor
+        isEditingProfile={isEditingProfile}
+        isOwnProfile={isOwnProfile}
+        formData={formData}
+        formErrors={formErrors}
+        error={error}
+        handleProfileEditToggle={handleProfileEditToggle}
+        handleFormChange={handleFormChange}
+        handleProfileSave={handleProfileSave}
+      />
+      <CreatePostForm
+        isCreatingPost={isCreatingPost}
+        isOwnProfile={isOwnProfile}
+        newPost={newPost}
+        postErrors={postErrors}
+        error={error}
+        handleCreatePostToggle={handleCreatePostToggle}
+        handlePostChange={handlePostChange}
+        handlePostImagesChange={handlePostImagesChange}
+        removePostImage={removePostImage}
+        handleCreatePost={handleCreatePost}
+      />
     </div>
   );
 };
