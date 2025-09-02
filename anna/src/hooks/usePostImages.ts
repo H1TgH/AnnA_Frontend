@@ -16,6 +16,7 @@ export const usePostImages = (
       const uploadUrls = await Promise.all(
         newImages.map(async () => {
           const response = await api.get(endpoints.posts.uploadUrl);
+          console.log('Upload URL response:', response); // <--- проверить object_name
           return response;
         })
       );

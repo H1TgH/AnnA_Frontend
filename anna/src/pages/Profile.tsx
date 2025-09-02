@@ -3,32 +3,28 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../App';
 import ProfileHeader from '../components/Profile/ProfileHeader';
 import AvatarEditor from '../components/Profile/AvatarEditor';
-import ProfileEditor from '../components/Profile/ProfileEditor';
-import CreatePostForm from '../components/Profile/CreatePostForm';
 import PhotosFeed from '../components/Profile/PhotosFeed';
 import PostsFeed from '../components/Profile/PostsFeed';
 import ImageModal from '../components/Profile/ImageModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorDisplay from '../components/ErrorDisplay';
 import CreatePostButton from '../components/CreatePostButton';
+import CreatePostForm from '../components/Profile/CreatePostForm';
 
 import { useProfile } from '../hooks/useProfile';
 import { usePosts } from '../hooks/usePosts';
 import { useUIState } from '../hooks/useUIState';
 import { useComments } from '../hooks/useComments';
 import { useImages } from '../hooks/useImages';
-import { useProfileForm, usePostForm } from '../hooks/useForms';
 import { useAvatar } from '../hooks/useAvatar';
 import { usePostActions } from '../hooks/usePostActions';
-import { useDataFetching } from '../hooks/useDataFetching';
-import { usePostImages } from '../hooks/usePostImages';
 import { useProfileActions } from '../hooks/useProfileActions';
+import { useDataFetching } from '../hooks/useDataFetching';
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, isLoading: authLoading, setUser } = useAuth();
 
-  // Основные хуки состояния
   const {
     profile,
     isLoading,
@@ -99,34 +95,15 @@ const ProfilePage: React.FC = () => {
     setCurrentImageIndices,
   } = useImages();
 
-  const {
-    formData,
-    formErrors,
-    setFormData,
-    setFormErrors,
-    handleFormChange,
-    resetForm,
-  } = useProfileForm({
-    name: '',
-    surname: '',
-    status: '',
-    birthday: '',
-    gender: '',
-  });
+  const { avatarFile, handleAvatarChange, handleAvatarSave, resetAvatar } = useAvatar(
+    isOwnProfile,
+    updateProfile,
+    setUser
+  );
 
-  const {
-    newPost: postFormData,
-    postErrors: postFormErrors,
-    setNewPost: setPostFormData,
-    setPostErrors: setPostFormErrors,
-    handlePostChange,
-    resetPostForm,
-  } = usePostForm();
-
-  // Хуки для действий
   const { handleProfileSave } = useProfileActions(
-    formData,
-    setFormErrors,
+    profile,
+    setErrorState,
     updateProfile,
     setUser
   );
@@ -141,19 +118,6 @@ const ProfilePage: React.FC = () => {
     setErrorState
   );
 
-  const { handlePostImagesChange, removePostImage } = usePostImages(
-    newPost,
-    setNewPostData,
-    setPostErrors
-  );
-
-  const { avatarFile, handleAvatarChange, handleAvatarSave, resetAvatar } = useAvatar(
-    isOwnProfile,
-    updateProfile,
-    setUser
-  );
-
-  // Хуки для загрузки данных
   const { fetchProfile, fetchPosts } = useDataFetching(
     id,
     user,
@@ -163,126 +127,51 @@ const ProfilePage: React.FC = () => {
     setPosts
   );
 
-  // Обработчики событий
-  const handleAvatarClick = () => {
-    if (isOwnProfile) {
-      showAvatarButton();
-    }
-  };
-
-  const handleAvatarEditToggle = () => {
-    toggleAvatarEdit();
-    resetAvatar();
-  };
-
-  const handleProfileEditToggle = () => {
-    if (profile) {
-      resetForm({
-        name: profile.name,
-        surname: profile.surname,
-        status: profile.status || '',
-        birthday: profile.birthday,
-        gender: profile.gender || '',
-      });
-    }
-    toggleProfileEdit();
-  };
-
   const handleCreatePostToggle = () => {
     toggleCreatePost();
-    resetPostForm();
+    resetNewPost();
   };
 
-  const handleFormSubmit = async () => {
-    try {
-      await handleProfileSave();
-      toggleProfileEdit();
-    } catch (err: any) {
-      setErrorState(err.message);
-    }
+  const handlePostChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewPostData('content', e.target.value);
+  };
+
+  const handlePostImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    setNewPostData('images', [...newPost.images, ...files]);
+  };
+
+  const removePostImage = (index: number) => {
+    setNewPostData(
+      'images',
+      newPost.images.filter((_, i) => i !== index)
+    );
+    setNewPostData(
+      'imageUrls',
+      newPost.imageUrls.filter((_, i) => i !== index)
+    );
   };
 
   const handlePostSubmit = async () => {
-    // Проверяем, что есть либо текст, либо изображения
     if (!newPost.content?.trim() && newPost.images.length === 0) {
       setPostErrors({ content: 'Добавьте текст или изображения', images: '' });
       return;
     }
-    
+
     const success = await handleCreatePost();
-    if (success) {
-      toggleCreatePost();
-    }
+    if (success) toggleCreatePost();
   };
 
-  const handleCommentSubmit = async (postId: string) => {
-    const commentText = commentInputs[postId] || '';
-    if (!commentText.trim()) return;
-    
-    const result = await handleAddComment(postId, commentText);
-    
-    if (result?.success) {
-      clearCommentInput(postId);
-      // Устанавливаем количество видимых комментариев, если комментарии еще не открыты
-      if (!visibleComments[postId] || visibleComments[postId] === 0) {
-        setVisibleComments((prev: { [postId: string]: number }) => ({ ...prev, [postId]: 3 }));
-      }
-    } else if (result?.error) {
-      setCommentErrors((prev: { [postId: string]: string }) => ({ ...prev, [postId]: result.error }));
-    }
-  };
-
-  const handleReplySubmit = async (postId: string, commentId: string) => {
-    const replyText = replyInputs[commentId] || '';
-    if (!replyText.trim()) return;
-    
-    const result = await handleAddReply(postId, commentId, replyText);
-    
-    if (result?.success) {
-      clearReplyInput(commentId);
-      toggleReplyForm(commentId);
-    } else if (result?.error) {
-      setReplyErrors((prev: { [commentId: string]: string }) => ({ ...prev, [commentId]: result.error }));
-    }
-  };
-
-  const handleAvatarSubmit = async () => {
-    try {
-      await handleAvatarSave();
-      toggleAvatarEdit();
-    } catch (err: any) {
-      setErrorState(err.message);
-    }
-  };
-
-  // Загрузка данных при монтировании
   useEffect(() => {
     if (!authLoading && user) {
       fetchProfile();
       fetchPosts();
     }
-  }, [fetchProfile, fetchPosts, authLoading, user]);
+  }, [authLoading, user, fetchProfile, fetchPosts]);
 
-  // Обновление формы при изменении профиля
-  useEffect(() => {
-    if (profile && isEditingProfile) {
-      resetForm({
-        name: profile.name,
-        surname: profile.surname,
-        status: profile.status || '',
-        birthday: profile.birthday,
-        gender: profile.gender || '',
-      });
-    }
-  }, [profile, isEditingProfile, resetForm]);
-
-  if (authLoading || isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  if (error || !profile) {
-    return <ErrorDisplay error={error} />;
-  }
+  if (authLoading || isLoading) return <LoadingSpinner />;
+  if (error || !profile) return <ErrorDisplay error={error} />;
 
   return (
     <div className="min-h-screen bg-rose-50 p-6 sm:p-12 font-sans pt-20">
@@ -292,16 +181,16 @@ const ProfilePage: React.FC = () => {
           isOwnProfile={isOwnProfile}
           isHoveringAvatar={isHoveringAvatar}
           setIsHoveringAvatar={setIsHoveringAvatar}
-          handleAvatarClick={handleAvatarClick}
-          handleProfileEditToggle={handleProfileEditToggle}
+          handleAvatarClick={() => isOwnProfile && showAvatarButton()}
+          handleProfileEditToggle={toggleProfileEdit}
           isAvatarButtonVisible={isAvatarButtonVisible}
-          handleAvatarEditToggle={handleAvatarEditToggle}
+          handleAvatarEditToggle={() => { toggleAvatarEdit(); resetAvatar(); }}
         />
-        
+
         <PhotosFeed allPhotos={allPhotos} handleImageClick={handleImageClick} />
-        
+
         <CreatePostButton isOwnProfile={isOwnProfile} onClick={handleCreatePostToggle} />
-        
+
         <PostsFeed
           posts={posts}
           profile={profile}
@@ -322,8 +211,18 @@ const ProfilePage: React.FC = () => {
           handlePrevPostImage={(postId) => handlePrevPostImage(postId, posts)}
           handleNextPostImage={(postId) => handleNextPostImage(postId, posts)}
           handleImageClick={handleImageClick}
-          handleAddComment={handleCommentSubmit}
-          handleAddReply={handleReplySubmit}
+          handleAddComment={async (postId: string) => {
+            const text = commentInputs[postId] || '';
+            if (!text.trim()) return;
+            const res = await handleAddComment(postId, text);
+            if (res?.success) clearCommentInput(postId);
+          }}
+          handleAddReply={async (postId: string, commentId: string) => {
+            const text = replyInputs[commentId] || '';
+            if (!text.trim()) return;
+            const res = await handleAddReply(postId, commentId, text);
+            if (res?.success) clearReplyInput(commentId);
+          }}
           allPhotos={allPhotos}
           setCurrentImageIndices={setCurrentImageIndices}
         />
@@ -343,20 +242,9 @@ const ProfilePage: React.FC = () => {
         isOwnProfile={isOwnProfile}
         avatarFile={avatarFile}
         error={error}
-        handleAvatarEditToggle={handleAvatarEditToggle}
+        handleAvatarEditToggle={() => { toggleAvatarEdit(); resetAvatar(); }}
         handleAvatarChange={handleAvatarChange}
-        handleAvatarSave={handleAvatarSubmit}
-      />
-
-      <ProfileEditor
-        isEditingProfile={isEditingProfile}
-        isOwnProfile={isOwnProfile}
-        formData={formData}
-        formErrors={formErrors}
-        error={error}
-        handleProfileEditToggle={handleProfileEditToggle}
-        handleFormChange={handleFormChange}
-        handleProfileSave={handleFormSubmit}
+        handleAvatarSave={async () => { await handleAvatarSave(); }}
       />
 
       <CreatePostForm
