@@ -60,7 +60,8 @@ export const useDataFetching = (
         likes_count: post.likes_count || 0,
         comments_count: post.comments_count || 0,
         comments: post.comments || [],
-        likes: post.likes || [], // Массив ID пользователей, которые поставили лайк
+        likes: post.likes || [],
+        is_liked: post.is_liked
       })));
     } catch (err: any) {
       setErrorState(err.message || 'Ошибка загрузки постов');
