@@ -20,6 +20,7 @@ import { useAvatar } from '../hooks/useAvatar';
 import { usePostActions } from '../hooks/usePostActions';
 import { useProfileActions } from '../hooks/useProfileActions';
 import { useDataFetching } from '../hooks/useDataFetching';
+import { api, endpoints } from '../utils/api';
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -159,8 +160,38 @@ const ProfilePage: React.FC = () => {
       return;
     }
 
-    const success = await handleCreatePost();
-    if (success) toggleCreatePost();
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of newPost.images) {
+        const { upload_url, object_name } = await api.get(endpoints.posts.uploadUrl);
+        await api.uploadFile(upload_url, file);
+        uploadedUrls.push(object_name);
+      }
+
+      const newPostResponse = await api.post(endpoints.posts.create, {
+        text: newPost.content,
+        images: uploadedUrls,
+      });
+
+      addPost({
+        id: newPostResponse.post_id,
+        text: newPostResponse.text,
+        images: newPostResponse.images,
+        created_at: newPostResponse.created_at,
+        likes_count: 0,
+        comments_count: 0,
+        is_liked: false,
+        comments: [],
+        likes: [],
+      });
+
+      resetNewPost();
+      toggleCreatePost();
+    } catch (err: any) {
+      console.error('Ошибка при создании поста:', err);
+      setPostErrors({ content: err.message, images: '' });
+    }
   };
 
   useEffect(() => {
