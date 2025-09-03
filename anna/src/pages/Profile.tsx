@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../App';
 import ProfileHeader from '../components/Profile/ProfileHeader';
+import ProfileEditor from '../components/Profile/ProfileEditor';
 import AvatarEditor from '../components/Profile/AvatarEditor';
 import PhotosFeed from '../components/Profile/PhotosFeed';
 import PostsFeed from '../components/Profile/PostsFeed';
@@ -329,6 +330,26 @@ const ProfilePage: React.FC = () => {
         handleAvatarEditToggle={() => { toggleAvatarEdit(); resetAvatar(); }}
         handleAvatarChange={handleAvatarChange}
         handleAvatarSave={async () => { await handleAvatarSave(); }}
+      />
+
+      <ProfileEditor
+        isEditingProfile={isEditingProfile}
+        isOwnProfile={isOwnProfile}
+        formData={{
+          name: profile.name,
+          surname: profile.surname,
+          status: profile.status || '',
+          birthday: profile.birthday || '',
+          gender: profile.gender || '',
+        }}
+        formErrors={{ name: '', surname: '', status: '', birthday: '' }}
+        error={error}
+        handleProfileEditToggle={toggleProfileEdit}
+       handleFormChange={(e) => {
+        const { name, value } = e.target;
+        updateProfile({ [name]: value });
+        }}
+        handleProfileSave={async () => { await handleProfileSave(); }}
       />
 
       <CreatePostForm
