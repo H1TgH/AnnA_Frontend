@@ -62,11 +62,17 @@ export const endpoints = {
     },
   },
   posts: {
-    userPosts: (id: string) => `/posts/${id}?limit=10`,
+    userPosts: (id: string, limit?: number, cursor?: string) => {
+      const params = new URLSearchParams();
+      if (limit) params.append('limit', String(limit));
+      if (cursor) params.append('cursor', cursor);
+      const q = params.toString();
+      return `/posts/${id}${q ? `?${q}` : ''}`;
+    },
     create: '/posts',
     like: (id: string) => `/posts/like/${id}`,
     comment: (id: string) => `/posts/comment/${id}`,
     comments: (id: string) => `/posts/comments/${id}`,
     uploadUrl: '/posts/upload-url',
   },
-}; 
+};

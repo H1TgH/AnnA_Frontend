@@ -1,3 +1,4 @@
+// useDataFetching.ts
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, endpoints } from '../utils/api';
@@ -44,15 +45,19 @@ export const useDataFetching = (
     } catch (err: any) {
       setErrorState(err.message || 'Ошибка загрузки профиля');
       navigate('/', { replace: true });
+    } finally {
+      setLoading(false);
     }
   }, [id, user, setProfileData, setLoading, setErrorState, navigate]);
 
-  const fetchPosts = useCallback(async () => {
-    if (!id) return;
-
+  // ---------- изменённая функция fetchPosts ----------
+  // Если cursor не передан — это initial load: replace posts.
+  // Если передан — append к существующим.
+  const fetchPosts = useCallback(async (cursor?: string, limit = 10) => {
+    if (!id) return [];
     try {
-      const data = await api.get(endpoints.posts.userPosts(id));
-      setPosts(data.posts.map((post: any) => ({
+      const data = await api.get(endpoints.posts.userPosts(id, limit, cursor));
+      const mapped = (data.posts || []).map((post: any) => ({
         id: post.id,
         text: post.text,
         images: post.images || [],
@@ -62,9 +67,20 @@ export const useDataFetching = (
         comments: post.comments || [],
         likes: post.likes || [],
         is_liked: post.is_liked
-      })));
+      }));
+
+      if (cursor) {
+        // append
+        setPosts((prev: any[]) => [...prev, ...mapped]);
+      } else {
+        // initial load / replace
+        setPosts(mapped);
+      }
+
+      return mapped; // возвращаем подгруженные посты для логики hasMore
     } catch (err: any) {
       setErrorState(err.message || 'Ошибка загрузки постов');
+      return [];
     }
   }, [id, setPosts, setErrorState]);
 
@@ -72,4 +88,4 @@ export const useDataFetching = (
     fetchProfile,
     fetchPosts,
   };
-}; 
+};

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../App';
 import ProfileHeader from '../components/Profile/ProfileHeader';
@@ -128,6 +128,64 @@ const ProfilePage: React.FC = () => {
     setPosts
   );
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isFetchingRef = useRef(false);
+  const hasMoreRef = useRef(true);
+
+  const loadMorePosts = useCallback(async () => {
+    if (isFetchingRef.current || !hasMoreRef.current) return;
+    if (!posts || posts.length === 0) return;
+
+    isFetchingRef.current = true;
+    try {
+      // cursor = created_at последнего поста
+      const lastPost = posts[posts.length - 1];
+      const cursor = lastPost?.created_at;
+      const fetched = await fetchPosts(cursor, 10); // 10 — тот же лимит, что и на беке
+      if (!fetched || fetched.length === 0 || fetched.length < 10) {
+        // если вернулось меньше лимита — вероятно больше нет
+        hasMoreRef.current = false;
+      }
+    } catch (err) {
+      console.error('Ошибка при загрузке следующей страницы постов:', err);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, [posts, fetchPosts]);
+
+  // создаём наблюдателя за sentinel
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMorePosts();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '300px', // начать подгружать заранее
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [loadMorePosts]);
+
+  // initial load
+  useEffect(() => {
+    if (!authLoading && user) {
+      fetchProfile();
+      // initial load: no cursor
+      fetchPosts();
+    }
+  }, [authLoading, user, fetchProfile, fetchPosts]);
+
   const handleCreatePostToggle = () => {
     toggleCreatePost();
     resetNewPost();
@@ -194,13 +252,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (!authLoading && user) {
-      fetchProfile();
-      fetchPosts();
-    }
-  }, [authLoading, user, fetchProfile, fetchPosts]);
-
   if (authLoading || isLoading) return <LoadingSpinner />;
   if (error || !profile) return <ErrorDisplay error={error} />;
 
@@ -258,6 +309,8 @@ const ProfilePage: React.FC = () => {
           setCurrentImageIndices={setCurrentImageIndices}
         />
       </div>
+
+      <div ref={sentinelRef} />
 
       <ImageModal
         selectedImage={selectedImage}
