@@ -5,6 +5,7 @@ import EmailConfirmPage from './pages/Email-confirmation';
 import ProfilePage from './pages/Profile';
 import ResetPasswordPage from './pages/Password-reset';
 import Header from './components/Header';
+import { usePresenceWebSocket } from './hooks/useUserStatus';
 
 interface UserInfo {
   id: string;
@@ -46,6 +47,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </main>
     </div>
   );
+};
+
+// Компонент для управления WebSocket подключением
+const PresenceManager: React.FC = () => {
+  const { isConnected } = usePresenceWebSocket();
+  
+  // Можно добавить индикатор подключения в UI если нужно
+  useEffect(() => {
+    console.log('Presence WebSocket status:', isConnected ? 'Connected' : 'Disconnected');
+  }, [isConnected]);
+
+  return null;
 };
 
 const App: React.FC = () => {
@@ -96,6 +109,8 @@ const App: React.FC = () => {
     <AuthContext.Provider value={{ user, setUser, isLoading, checkAuth }}>
       <Router>
         <Layout>
+          {user && <PresenceManager />}
+          
           <Routes>
             <Route
               path="/"

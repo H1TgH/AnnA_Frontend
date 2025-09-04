@@ -56,6 +56,7 @@ export const endpoints = {
   users: {
     profile: (id: string) => `/users/${id}`,
     me: '/users/me',
+    status: (id: string) => `/users/${id}/status`,
     avatar: {
       uploadUrl: '/users/avatar/upload-url',
       save: '/users/avatar',
@@ -74,5 +75,8 @@ export const endpoints = {
     comment: (id: string) => `/posts/comment/${id}`,
     comments: (id: string) => `/posts/comments/${id}`,
     uploadUrl: '/posts/upload-url',
+  },
+  websocket: {
+    presence: '/ws/presence',
   },
 };
