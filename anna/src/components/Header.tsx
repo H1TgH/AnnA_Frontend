@@ -17,10 +17,16 @@ const Header: React.FC = () => {
     setSearchQuery(e.target.value);
   }, []);
 
-  const handleSearchSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log('Search query:', searchQuery); // Заглушка
-  }, [searchQuery]);
+  const handleSearchSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      if (!searchQuery.trim()) return;
+
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    },
+    [navigate, searchQuery]
+  );
 
   const handleProfileClick = useCallback(() => {
     if (user) {

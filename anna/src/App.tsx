@@ -6,6 +6,7 @@ import ProfilePage from './pages/Profile';
 import ResetPasswordPage from './pages/Password-reset';
 import Header from './components/Header';
 import { usePresence } from './hooks/usePresence';
+import SearchResultsPage from './components/SearchResultsPage';
 
 interface UserInfo {
   id: string;
@@ -144,6 +145,7 @@ const App: React.FC = () => {
                 )
               }
             />
+            <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/email-confirmation" element={<EmailConfirmPage />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="/password-reset" element={<ResetPasswordPage />} />
