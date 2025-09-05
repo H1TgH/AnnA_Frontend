@@ -21,11 +21,15 @@ import { useAvatar } from '../hooks/useAvatar';
 import { usePostActions } from '../hooks/usePostActions';
 import { useProfileActions } from '../hooks/useProfileActions';
 import { useDataFetching } from '../hooks/useDataFetching';
+import { usePresence } from '../hooks/usePresence';
 import { api, endpoints } from '../utils/api';
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, isLoading: authLoading, setUser } = useAuth();
+
+  // Подключаем WebSocket для presence
+  usePresence(user);
 
   const {
     profile,
@@ -92,6 +96,7 @@ const ProfilePage: React.FC = () => {
     handleCloseModal,
     handlePrevImage,
     handleNextImage,
+    handleImageSelect,
     handlePrevPostImage,
     handleNextPostImage,
     setCurrentImageIndices,
@@ -139,12 +144,10 @@ const ProfilePage: React.FC = () => {
 
     isFetchingRef.current = true;
     try {
-      // cursor = created_at последнего поста
       const lastPost = posts[posts.length - 1];
       const cursor = lastPost?.created_at;
-      const fetched = await fetchPosts(cursor, 10); // 10 — тот же лимит, что и на беке
+      const fetched = await fetchPosts(cursor, 10);
       if (!fetched || fetched.length === 0 || fetched.length < 10) {
-        // если вернулось меньше лимита — вероятно больше нет
         hasMoreRef.current = false;
       }
     } catch (err) {
@@ -154,7 +157,6 @@ const ProfilePage: React.FC = () => {
     }
   }, [posts, fetchPosts]);
 
-  // создаём наблюдателя за sentinel
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -167,7 +169,7 @@ const ProfilePage: React.FC = () => {
       },
       {
         root: null,
-        rootMargin: '300px', // начать подгружать заранее
+        rootMargin: '300px',
         threshold: 0.1,
       }
     );
@@ -178,11 +180,9 @@ const ProfilePage: React.FC = () => {
     };
   }, [loadMorePosts]);
 
-  // initial load
   useEffect(() => {
     if (!authLoading && user) {
       fetchProfile();
-      // initial load: no cursor
       fetchPosts();
     }
   }, [authLoading, user, fetchProfile, fetchPosts]);
@@ -253,6 +253,26 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // Закрытие модальных окон по клику вне их
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (selectedImage) {
+          handleCloseModal();
+        } else if (isEditingProfile) {
+          toggleProfileEdit();
+        } else if (isEditingAvatar) {
+          toggleAvatarEdit();
+        } else if (isCreatingPost) {
+          handleCreatePostToggle();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [selectedImage, isEditingProfile, isEditingAvatar, isCreatingPost, handleCloseModal, toggleProfileEdit, toggleAvatarEdit, handleCreatePostToggle]);
+
   if (authLoading || isLoading) return <LoadingSpinner />;
   if (error || !profile) return <ErrorDisplay error={error} />;
 
@@ -264,7 +284,7 @@ const ProfilePage: React.FC = () => {
           isOwnProfile={isOwnProfile}
           isHoveringAvatar={isHoveringAvatar}
           setIsHoveringAvatar={setIsHoveringAvatar}
-          handleAvatarClick={() => isOwnProfile && showAvatarButton()}
+          handleAvatarClick={toggleAvatarEdit}
           handleProfileEditToggle={toggleProfileEdit}
           isAvatarButtonVisible={isAvatarButtonVisible}
           handleAvatarEditToggle={() => { toggleAvatarEdit(); resetAvatar(); }}
@@ -320,6 +340,7 @@ const ProfilePage: React.FC = () => {
         handleCloseModal={handleCloseModal}
         handlePrevImage={() => handlePrevImage(allPhotos)}
         handleNextImage={() => handleNextImage(allPhotos)}
+        handleImageSelect={(index: number) => handleImageSelect(index, allPhotos)}
       />
 
       <AvatarEditor
@@ -329,7 +350,10 @@ const ProfilePage: React.FC = () => {
         error={error}
         handleAvatarEditToggle={() => { toggleAvatarEdit(); resetAvatar(); }}
         handleAvatarChange={handleAvatarChange}
-        handleAvatarSave={async () => { await handleAvatarSave(); }}
+        handleAvatarSave={async () => { 
+          const success = await handleAvatarSave(); 
+          if (success) toggleAvatarEdit();
+        }}
       />
 
       <ProfileEditor
@@ -345,11 +369,14 @@ const ProfilePage: React.FC = () => {
         formErrors={{ name: '', surname: '', status: '', birthday: '' }}
         error={error}
         handleProfileEditToggle={toggleProfileEdit}
-       handleFormChange={(e) => {
-        const { name, value } = e.target;
-        updateProfile({ [name]: value });
+        handleFormChange={(e) => {
+          const { name, value } = e.target;
+          updateProfile({ [name]: value });
         }}
-        handleProfileSave={async () => { await handleProfileSave(); }}
+        handleProfileSave={async () => { 
+          const success = await handleProfileSave(); 
+          if (success) toggleProfileEdit();
+        }}
       />
 
       <CreatePostForm

@@ -7,6 +7,7 @@ interface ImageModalProps {
   handleCloseModal: () => void;
   handlePrevImage: () => void;
   handleNextImage: () => void;
+  handleImageSelect: (index: number) => void;
 }
 
 const ImageModal: React.FC<ImageModalProps> = ({
@@ -16,8 +17,15 @@ const ImageModal: React.FC<ImageModalProps> = ({
   handleCloseModal,
   handlePrevImage,
   handleNextImage,
+  handleImageSelect,
 }) => {
   if (!selectedImage) return null;
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      handleCloseModal();
+    }
+  };
 
   return (
     <div
@@ -25,7 +33,7 @@ const ImageModal: React.FC<ImageModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Просмотр изображения"
-      onClick={handleCloseModal}
+      onClick={handleBackdropClick}
     >
       {/* Кнопка закрытия */}
       <button
@@ -61,7 +69,10 @@ const ImageModal: React.FC<ImageModalProps> = ({
         {allPhotos.length > 1 && (
           <>
             <button
-              onClick={handlePrevImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevImage();
+              }}
               className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-white/30 group"
               aria-label="Предыдущее изображение"
             >
@@ -78,7 +89,10 @@ const ImageModal: React.FC<ImageModalProps> = ({
             </button>
             
             <button
-              onClick={handleNextImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextImage();
+              }}
               className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-white/30 group"
               aria-label="Следующее изображение"
             >
@@ -109,9 +123,9 @@ const ImageModal: React.FC<ImageModalProps> = ({
             {allPhotos.map((_, index) => (
               <button
                 key={index}
-                onClick={() => {
-                  // Здесь можно добавить логику для перехода к конкретному изображению
-                  // Но для этого нужно будет передать дополнительный проп
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleImageSelect(index);
                 }}
                 className={`w-3 h-3 rounded-full transition-all duration-200 ${
                   index === currentImageIndex 

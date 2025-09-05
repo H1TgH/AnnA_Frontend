@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../App";
 
@@ -7,6 +7,7 @@ const Header: React.FC = () => {
   const { user, isLoading, setUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogoClick = useCallback(() => {
     navigate('/');
@@ -24,6 +25,7 @@ const Header: React.FC = () => {
   const handleProfileClick = useCallback(() => {
     if (user) {
       navigate(`/profile/${user.id}`);
+      setIsDropdownOpen(false);
     }
   }, [user, navigate]);
 
@@ -57,6 +59,23 @@ const Header: React.FC = () => {
   const toggleDropdown = useCallback(() => {
     setIsDropdownOpen((prev) => !prev);
   }, []);
+
+  // Закрытие dropdown при клике вне его
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   return (
     <header className="bg-white shadow-md p-4 fixed top-0 left-0 right-0 z-50 font-sans">
@@ -116,7 +135,7 @@ const Header: React.FC = () => {
         ) : !user ? (
           <div className="text-red-600 text-sm">Ошибка загрузки</div>
         ) : (
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <div className="flex items-center gap-2 cursor-pointer" onClick={toggleDropdown}>
               <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-rose-200 overflow-hidden">
                 {user.avatar_url ? (
@@ -130,7 +149,9 @@ const Header: React.FC = () => {
               <span className="text-gray-800 font-medium">{`${user.name} ${user.surname}`}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
+                className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${
+                  isDropdownOpen ? 'rotate-180' : ''
+                }`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -139,16 +160,16 @@ const Header: React.FC = () => {
               </svg>
             </div>
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-10">
                 <button
                   onClick={handleProfileClick}
-                  className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200"
+                  className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200 rounded-t-lg"
                 >
                   Мой профиль
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200"
+                  className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200 rounded-b-lg"
                 >
                   Выйти
                 </button>

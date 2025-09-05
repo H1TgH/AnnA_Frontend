@@ -16,14 +16,21 @@ export const useImages = () => {
   }, []);
 
   const handlePrevImage = useCallback((allPhotos: string[]) => {
-    setCurrentImageIndex(prev => (prev > 0 ? prev - 1 : allPhotos.length - 1));
-    setSelectedImage(allPhotos[currentImageIndex > 0 ? currentImageIndex - 1 : allPhotos.length - 1]);
+    const newIndex = currentImageIndex > 0 ? currentImageIndex - 1 : allPhotos.length - 1;
+    setCurrentImageIndex(newIndex);
+    setSelectedImage(allPhotos[newIndex]);
   }, [currentImageIndex]);
 
   const handleNextImage = useCallback((allPhotos: string[]) => {
-    setCurrentImageIndex(prev => (prev < allPhotos.length - 1 ? prev + 1 : 0));
-    setSelectedImage(allPhotos[currentImageIndex < allPhotos.length - 1 ? currentImageIndex + 1 : 0]);
+    const newIndex = currentImageIndex < allPhotos.length - 1 ? currentImageIndex + 1 : 0;
+    setCurrentImageIndex(newIndex);
+    setSelectedImage(allPhotos[newIndex]);
   }, [currentImageIndex]);
+
+  const handleImageSelect = useCallback((index: number, allPhotos: string[]) => {
+    setCurrentImageIndex(index);
+    setSelectedImage(allPhotos[index]);
+  }, []);
 
   const handlePrevPostImage = useCallback((postId: string, posts: any[]) => {
     setCurrentImageIndices(prev => {
@@ -51,8 +58,9 @@ export const useImages = () => {
     handleCloseModal,
     handlePrevImage,
     handleNextImage,
+    handleImageSelect,
     handlePrevPostImage,
     handleNextPostImage,
     setCurrentImageIndices,
   };
-}; 
+};

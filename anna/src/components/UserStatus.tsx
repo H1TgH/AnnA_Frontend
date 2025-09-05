@@ -1,139 +1,82 @@
-// src/components/UserStatus.tsx
-import React from 'react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
-import { ru } from 'date-fns/locale';
-import { UserStatus as UserStatusType } from '../hooks/useUserStatus';
+import React, { useState, useEffect } from 'react';
+
+interface UserStatus {
+  status: 'online' | 'offline';
+  last_seen: string | null;
+}
 
 interface UserStatusProps {
-  userStatus: UserStatusType | null;
-  isLoading?: boolean;
-  showText?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  userId: string;
   className?: string;
 }
 
-const UserStatus: React.FC<UserStatusProps> = ({ 
-  userStatus, 
-  isLoading = false, 
-  showText = true, 
-  size = 'md',
-  className = '' 
-}) => {
-  const formatLastSeen = (lastSeen: string) => {
-    try {
-      const date = parseISO(lastSeen);
-      return formatDistanceToNow(date, { 
-        addSuffix: true, 
-        locale: ru 
-      });
-    } catch (error) {
-      return 'недавно';
-    }
+const UserStatusComponent: React.FC<UserStatusProps> = ({ userId, className = '' }) => {
+  const [status, setStatus] = useState<UserStatus>({ status: 'offline', last_seen: null });
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/api/v1/users/${userId}/status`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setStatus({
+            status: data.status,
+            last_seen: data.last_seen,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user status:', error);
+      }
+    };
+
+    fetchStatus();
+
+    // Обновляем статус каждые 30 секунд
+    const interval = setInterval(fetchStatus, 30000);
+
+    return () => clearInterval(interval);
+  }, [userId]);
+
+  const formatLastSeen = (lastSeen: string | null) => {
+    if (!lastSeen) return '';
+    
+    const now = new Date();
+    const lastSeenDate = new Date(lastSeen);
+    const diffInSeconds = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'только что';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} мин. назад`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ч. назад`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} дн. назад`;
+    
+    return lastSeenDate.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      year: now.getFullYear() !== lastSeenDate.getFullYear() ? 'numeric' : undefined,
+    });
   };
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return {
-          dot: 'w-2 h-2',
-          text: 'text-xs',
-          container: 'gap-1'
-        };
-      case 'lg':
-        return {
-          dot: 'w-4 h-4',
-          text: 'text-base',
-          container: 'gap-3'
-        };
-      default:
-        return {
-          dot: 'w-3 h-3',
-          text: 'text-sm',
-          container: 'gap-2'
-        };
-    }
-  };
-
-  const sizeClasses = getSizeClasses();
-
-  if (isLoading) {
+  if (status.status === 'online') {
     return (
-      <div className={`flex items-center ${sizeClasses.container} ${className}`}>
-        <div className={`${sizeClasses.dot} bg-gray-300 rounded-full animate-pulse`} />
-        {showText && (
-          <span className={`text-gray-500 ${sizeClasses.text}`}>
-            Загрузка...
-          </span>
-        )}
+      <div className={`flex items-center gap-2 ${className}`}>
+        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+        <span className="text-green-600 text-sm font-medium">В сети</span>
       </div>
     );
   }
 
-  if (!userStatus) {
-    return null;
+  if (status.last_seen) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+        <span className="text-gray-500 text-sm">Был в сети {formatLastSeen(status.last_seen)}</span>
+      </div>
+    );
   }
 
-  const isOnline = userStatus.status === 'online';
-
-  return (
-    <div className={`flex items-center ${sizeClasses.container} ${className}`}>
-      {/* Статус точка */}
-      <div className="relative">
-        <div 
-          className={`
-            ${sizeClasses.dot} 
-            rounded-full 
-            ${isOnline 
-              ? 'bg-green-500 shadow-lg' 
-              : 'bg-gray-400'
-            }
-            ${isOnline ? 'animate-pulse' : ''}
-          `} 
-        />
-        {isOnline && (
-          <div 
-            className={`
-              absolute inset-0 
-              ${sizeClasses.dot} 
-              bg-green-500 
-              rounded-full 
-              animate-ping 
-              opacity-75
-            `} 
-          />
-        )}
-      </div>
-
-      {/* Статус текст */}
-      {showText && (
-        <div className="flex flex-col">
-          <span 
-            className={`
-              font-medium 
-              ${sizeClasses.text}
-              ${isOnline 
-                ? 'text-green-600' 
-                : 'text-gray-600'
-              }
-            `}
-          >
-            {isOnline ? 'В сети' : 'Не в сети'}
-          </span>
-          
-          {!isOnline && userStatus.last_seen && (
-            <span 
-              className={`
-                text-gray-500 
-                ${size === 'lg' ? 'text-sm' : 'text-xs'}
-              `}
-            >
-              был {formatLastSeen(userStatus.last_seen)}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return null;
 };
 
-export default UserStatus;
+export default UserStatusComponent;
