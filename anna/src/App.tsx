@@ -6,7 +6,7 @@ import ProfilePage from './pages/Profile';
 import ResetPasswordPage from './pages/Password-reset';
 import Header from './components/Header';
 import { usePresence } from './hooks/usePresence';
-import SearchResultsPage from './components/SearchResultsPage';
+import SearchResultsPage from './pages/SearchResultsPage';
 
 interface UserInfo {
   id: string;
