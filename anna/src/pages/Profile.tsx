@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import ProfileHeader from '../components/Profile/ProfileHeader';
 import ProfileEditor from '../components/Profile/ProfileEditor';
@@ -11,7 +11,6 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorDisplay from '../components/ErrorDisplay';
 import CreatePostButton from '../components/CreatePostButton';
 import CreatePostForm from '../components/Profile/CreatePostForm';
-
 import { useProfile } from '../hooks/useProfile';
 import { usePosts } from '../hooks/usePosts';
 import { useUIState } from '../hooks/useUIState';
@@ -27,8 +26,8 @@ import { api, endpoints } from '../utils/api';
 const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user, isLoading: authLoading, setUser } = useAuth();
+  const navigate = useNavigate();
 
-  // Подключаем WebSocket для presence
   usePresence(user);
 
   const {
@@ -137,6 +136,18 @@ const ProfilePage: React.FC = () => {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isFetchingRef = useRef(false);
   const hasMoreRef = useRef(true);
+
+  const handleStartChat = async () => {
+    if (!id || !user) return;
+    try {
+      const response = await api.get(`/api/v1/conversation?receiver_id=${id}`);
+      const { conversation_id } = response;
+      navigate(`/chats?conversation_id=${conversation_id}`);
+    } catch (err) {
+      console.error('Ошибка при создании беседы:', err);
+      setErrorState('Не удалось начать чат');
+    }
+  };
 
   const loadMorePosts = useCallback(async () => {
     if (isFetchingRef.current || !hasMoreRef.current) return;
@@ -253,7 +264,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Закрытие модальных окон по клику вне их
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -289,11 +299,18 @@ const ProfilePage: React.FC = () => {
           isAvatarButtonVisible={isAvatarButtonVisible}
           handleAvatarEditToggle={() => { toggleAvatarEdit(); resetAvatar(); }}
         />
-
+        {!isOwnProfile && (
+          <div className="p-4">
+            <button
+              onClick={handleStartChat}
+              className="bg-rose-500 text-white px-4 py-2 rounded-lg hover:bg-rose-600 transition-colors duration-200"
+            >
+              Написать сообщение
+            </button>
+          </div>
+        )}
         <PhotosFeed allPhotos={allPhotos} handleImageClick={handleImageClick} />
-
         <CreatePostButton isOwnProfile={isOwnProfile} onClick={handleCreatePostToggle} />
-
         <PostsFeed
           posts={posts}
           profile={profile}
@@ -330,9 +347,7 @@ const ProfilePage: React.FC = () => {
           setCurrentImageIndices={setCurrentImageIndices}
         />
       </div>
-
       <div ref={sentinelRef} />
-
       <ImageModal
         selectedImage={selectedImage}
         allPhotos={allPhotos}
@@ -342,7 +357,6 @@ const ProfilePage: React.FC = () => {
         handleNextImage={() => handleNextImage(allPhotos)}
         handleImageSelect={(index: number) => handleImageSelect(index, allPhotos)}
       />
-
       <AvatarEditor
         isEditingAvatar={isEditingAvatar}
         isOwnProfile={isOwnProfile}
@@ -355,7 +369,6 @@ const ProfilePage: React.FC = () => {
           if (success) toggleAvatarEdit();
         }}
       />
-
       <ProfileEditor
         isEditingProfile={isEditingProfile}
         isOwnProfile={isOwnProfile}
@@ -378,7 +391,6 @@ const ProfilePage: React.FC = () => {
           if (success) toggleProfileEdit();
         }}
       />
-
       <CreatePostForm
         isCreatingPost={isCreatingPost}
         isOwnProfile={isOwnProfile}

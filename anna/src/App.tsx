@@ -7,6 +7,8 @@ import ResetPasswordPage from './pages/Password-reset';
 import Header from './components/Header';
 import { usePresence } from './hooks/usePresence';
 import SearchResultsPage from './pages/SearchResultsPage';
+import ChatsPage from './pages/ChatsPage';
+import ChatPage from './pages/ChatPage';
 
 interface UserInfo {
   id: string;
@@ -50,12 +52,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-// Компонент для управления WebSocket подключением
 const PresenceManager: React.FC = () => {
   const { user } = useAuth();
   const { isConnected } = usePresence(user);
   
-  // Можно добавить индикатор подключения в UI если нужно
   useEffect(() => {
     if (user) {
       console.log('Presence WebSocket status:', isConnected ? 'Connected' : 'Disconnected');
@@ -149,6 +149,8 @@ const App: React.FC = () => {
             <Route path="/email-confirmation" element={<EmailConfirmPage />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="/password-reset" element={<ResetPasswordPage />} />
+            <Route path="/chats" element={<ChatsPage />} />
+            <Route path="/chats/:conversation_id" element={<ChatPage />} />
           </Routes>
         </Layout>
       </Router>

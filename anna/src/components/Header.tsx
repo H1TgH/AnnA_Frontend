@@ -35,6 +35,11 @@ const Header: React.FC = () => {
     }
   }, [user, navigate]);
 
+  const handleChatsClick = useCallback(() => {
+    navigate('/chats');
+    setIsDropdownOpen(false);
+  }, [navigate]);
+
   const handleLogout = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:8000/api/v1/users/logout', {
@@ -49,13 +54,10 @@ const Header: React.FC = () => {
     } catch (err: any) {
       console.error('Logout error:', err.message);
     } finally {
-      // Очищаем cookies на фронте
       document.cookie = 'access_token=;path=/;max-age=0';
       document.cookie = 'refresh_token=;path=/;max-age=0';
       document.cookie = 'user_id=;path=/;max-age=0';
-      // Сбрасываем состояние пользователя
       setUser(null);
-      // Редирект на главную
       setTimeout(() => {
         navigate('/', { replace: true });
       }, 0);
@@ -66,7 +68,6 @@ const Header: React.FC = () => {
     setIsDropdownOpen((prev) => !prev);
   }, []);
 
-  // Закрытие dropdown при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -172,6 +173,12 @@ const Header: React.FC = () => {
                   className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200 rounded-t-lg"
                 >
                   Мой профиль
+                </button>
+                <button
+                  onClick={handleChatsClick}
+                  className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-rose-50 hover:text-rose-600 transition-colors duration-200"
+                >
+                  Чаты
                 </button>
                 <button
                   onClick={handleLogout}
