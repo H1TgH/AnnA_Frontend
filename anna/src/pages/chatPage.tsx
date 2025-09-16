@@ -80,7 +80,6 @@ const ChatPage: React.FC = () => {
         setMessages((prev) => [...response.messages.reverse(), ...prev]);
       } else {
         setMessages(response.messages.reverse());
-        setTimeout(() => scrollToBottom(false), 200);
       }
       
       setNextCursor(response.next_cursor);
@@ -262,13 +261,21 @@ const ChatPage: React.FC = () => {
   }, [authLoading, user, conversation_id, fetchConversation, fetchMessages, connectWebSocket, disconnectWebSocket]);
 
   useEffect(() => {
+    if (!messagesContainerRef.current) return;
+
+    const container = messagesContainerRef.current;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isFetchingRef.current) {
           fetchMessages(nextCursor || undefined);
         }
       },
-      { rootMargin: '300px', threshold: 0.1 }
+      {
+        root: container,      // Важно! Контейнер с прокруткой
+        rootMargin: '0px',
+        threshold: 0.1
+      }
     );
 
     if (sentinelRef.current) {
@@ -276,9 +283,7 @@ const ChatPage: React.FC = () => {
     }
 
     return () => {
-      if (sentinelRef.current) {
-        observer.unobserve(sentinelRef.current);
-      }
+      if (sentinelRef.current) observer.unobserve(sentinelRef.current);
     };
   }, [hasMore, nextCursor, fetchMessages]);
 
