@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../App';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorDisplay from '../components/ErrorDisplay';
@@ -379,7 +379,12 @@ const ChatPage: React.FC = () => {
   const otherParticipant = conversation.participants.find((p) => p.id !== user?.id);
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50">
+    <div 
+    className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-rose-50"
+    style={{ 
+      maxHeight: '92vh',
+      minHeight: '92vh',
+    }}>
       {/* Header */}
       <div className="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -423,9 +428,17 @@ const ChatPage: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">
-                    {otherParticipant?.name} {otherParticipant?.surname}
-                  </h2>
+                  <h1 className="text-2xl font-bold text-gray-800">
+                    {otherParticipant && (
+                      <Link
+                        to={`/profile/${otherParticipant.id}`}
+                        className="hover:underline hover:text-rose-600 transition-colors"
+                      >
+                        {otherParticipant.name} {otherParticipant.surname}
+                      </Link>
+                    )}
+                  </h1>
+
                   <p className={`text-sm ${
                     otherParticipant?.status === 'online' ? 'text-green-600' : 'text-gray-500'
                   }`}>
@@ -471,9 +484,9 @@ const ChatPage: React.FC = () => {
       {/* Messages area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-transparent"
+        className="overflow-y-auto px-6 py-4 space-y-4 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-transparent"
         onScroll={checkScrollPosition}
-        style={{ scrollBehavior: 'smooth' }}
+        style={{ scrollBehavior: 'smooth'}}
       >
         <div className="max-w-4xl mx-auto">
           {/* Load more sentinel */}
@@ -493,85 +506,137 @@ const ChatPage: React.FC = () => {
             <>
               {messages.map((message, index) => {
                 const isOwn = message.sender_id === user?.id;
-                const showAvatar = !isOwn && (index === 0 || messages[index - 1].sender_id !== message.sender_id);
+                const prevMessage = messages[index - 1];
+                const prevDate = prevMessage ? new Date(prevMessage.created_at).toDateString() : null;
+                const currDate = new Date(message.created_at).toDateString();
+                const showDateDivider = !prevMessage || prevDate !== currDate;
+
                 const nextMessage = messages[index + 1];
                 const isLastInGroup = !nextMessage || nextMessage.sender_id !== message.sender_id;
-                
+
+                // 👇 пример логики для "Новые сообщения"
+                const firstUnreadIndex = messages.findIndex(m => !m.is_read && m.sender_id !== user?.id);
+                const showNewMessagesDivider = index === firstUnreadIndex;
+
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${
-                      !showAvatar ? (isOwn ? 'pr-12' : 'pl-12') : ''
-                    } group`}
-                    onClick={() => !message.is_read && !isOwn && handleMarkAsRead(message.id)}
-                  >
-                    {/* Avatar */}
-                    {showAvatar && !isOwn && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 overflow-hidden flex-shrink-0">
-                        {otherParticipant?.avatar_url ? (
-                          <img
-                            src={otherParticipant.avatar_url}
-                            alt="Avatar"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <span className="text-white text-xs font-bold">
-                              {otherParticipant?.name[0]}
-                            </span>
-                          </div>
-                        )}
+                  <React.Fragment key={message.id}>
+                    {/* Дата */}
+                    {showDateDivider && (
+                      <div className="flex justify-center my-4">
+                        <span className="px-4 py-1 text-xs bg-gray-200/70 text-gray-600 rounded-full shadow-sm">
+                          {(() => {
+                            const now = new Date();
+                            const msgDate = new Date(message.created_at);
+                            const diffDays = Math.floor((+now - +msgDate) / (1000 * 60 * 60 * 24));
+                            if (diffDays === 0) return "Сегодня";
+                            if (diffDays === 1) return "Вчера";
+                            return msgDate.toLocaleDateString("ru-RU", {
+                              day: "numeric",
+                              month: "short",
+                              year: msgDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+                            });
+                          })()}
+                        </span>
                       </div>
                     )}
 
-                    {/* Spacer for non-avatar messages */}
-                    {!showAvatar && !isOwn && <div className="w-8" />}
+                    {/* Новые сообщения */}
+                    {showNewMessagesDivider && (
+                      <div className="flex justify-center my-2">
+                        <span className="px-4 py-1 text-xs bg-rose-100 text-rose-600 rounded-full shadow-md">
+                          Новые сообщения
+                        </span>
+                      </div>
+                    )}
 
-                    {/* Message bubble */}
-                    <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+                    {/* Сообщение */}
+                    <div className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"} group items-end`}>
+                      {/* Для чужих сообщений */}
+                      {!isOwn && (
+                        <div className="w-10 h-10 flex-shrink-0">
+                          {isLastInGroup ? (
+                            otherParticipant?.avatar_url ? (
+                              <img
+                                src={otherParticipant.avatar_url}
+                                alt="Avatar"
+                                className="w-full h-full rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center">
+                                <span className="text-white font-bold">{otherParticipant?.name[0]}</span>
+                              </div>
+                            )
+                          ) : (
+                            // Если не последнее в группе — просто пустой блок того же размера
+                            <div className="w-full h-full" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Бабл */}
                       <div
-                        className={`px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md ${
+                        className={`relative max-w-[70%] px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 ${
                           isOwn
                             ? `bg-gradient-to-br from-rose-500 to-rose-600 text-white ${
-                                isLastInGroup ? 'rounded-br-md' : ''
+                                isLastInGroup ? "rounded-br-md" : ""
                               }`
                             : `bg-white border border-gray-200 text-gray-800 hover:border-gray-300 ${
-                                isLastInGroup ? 'rounded-bl-md' : ''
+                                isLastInGroup ? "rounded-bl-md" : ""
                               }`
                         }`}
                       >
-                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                           {message.text}
                         </p>
+
+                        {/* Экшены при наведении */}
+                        <div
+                          className={`absolute ${
+                            isOwn ? "-left-16" : "-right-16"
+                          } top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity`}
+                        >
+                          <button className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm">
+                            ✏️
+                          </button>
+                          <button className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm">
+                            🗑
+                          </button>
+                          <button className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm">
+                            📋
+                          </button>
+                        </div>
                       </div>
-                      
-                      {/* Message info */}
+
+                      {/* Время + статус */}
                       {isLastInGroup && (
-                        <div className={`flex items-center gap-2 mt-1 px-1 ${
-                          isOwn ? 'flex-row-reverse' : 'flex-row'
-                        }`}>
+                        <div
+                          className={`flex items-center gap-2 mt-1 px-1 ${
+                            isOwn ? "flex-row-reverse" : "flex-row"
+                          }`}
+                        >
                           <span className="text-xs text-gray-500">
                             {formatMessageTime(message.created_at)}
-                            {message.is_edited && ' (изм.)'}
+                            {message.is_edited && " (изм.)"}
                           </span>
-                          
                           {isOwn && (
-                            <div className="flex items-center">
-                              {message.is_read ? (
-                                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              ) : (
-                                <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
+                            <svg
+                              className={`w-4 h-4 ${
+                                message.is_read ? "text-blue-500" : "text-gray-400"
+                              }`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                           )}
                         </div>
                       )}
                     </div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
             </>
