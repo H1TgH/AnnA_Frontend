@@ -165,7 +165,7 @@ const ChatsPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-red-50 pt-10">
       <div className="max-w-4xl mx-auto bg-white min-h-screen shadow-lg">
         <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
           <div className="px-6 py-4">
