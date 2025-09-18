@@ -8,7 +8,7 @@ import Header from './components/Header';
 import { usePresence } from './hooks/usePresence';
 import SearchResultsPage from './pages/SearchResultsPage';
 import ChatsPage from './pages/ChatsPage';
-import ChatPage from './pages/ChatPage';
+import ChatPage from './pages/chatPage';
 
 interface UserInfo {
   id: string;

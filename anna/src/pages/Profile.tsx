@@ -140,7 +140,7 @@ const ProfilePage: React.FC = () => {
   const handleStartChat = async () => {
     if (!id || !user) return;
     try {
-      const response = await api.get(`/api/v1/conversation?receiver_id=${id}`);
+      const response = await api.get(`/conversation?receiver_id=${id}`);
       const { conversation_id } = response;
       navigate(`/chats?conversation_id=${conversation_id}`);
     } catch (err) {
