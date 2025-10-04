@@ -45,6 +45,8 @@ const ChatPage: React.FC = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>('');
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -139,9 +141,20 @@ const ChatPage: React.FC = () => {
     websocket.onopen = () => setWs(websocket);
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
+
       if (data.event === 'new_message') {
         setMessages(prev => [...prev, data.message]);
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      } else if (data.event === 'message_read') {
+        setMessages(prev => prev.map(m => m.id === data.message_id ? { ...m, is_read: true } : m));
+      } else if (data.event === 'message_edited') {
+        setMessages(prev => prev.map(m => m.id === data.message.id ? { ...m, text: data.message.text, is_edited: true } : m));
+      } else if (data.event === 'message_deleted') {
+        if (data.mode === 'all') {
+          setMessages(prev => prev.filter(m => m.id !== data.message_id));
+        } else {
+          setMessages(prev => prev.filter(m => m.id !== data.message_id));
+        }
       }
     };
     websocket.onerror = (error) => console.error('WebSocket ошибка:', error);
@@ -164,6 +177,70 @@ const ChatPage: React.FC = () => {
     }
   }, [newMessage, ws, isSending]);
 
+  // Редактирование сообщения
+  const startEditMessage = useCallback((messageId: string, currentText: string) => {
+    setEditingMessageId(messageId);
+    setEditingText(currentText);
+  }, []);
+
+  const cancelEditMessage = useCallback(() => {
+    setEditingMessageId(null);
+    setEditingText('');
+  }, []);
+
+  const saveEditMessage = useCallback(() => {
+    if (!ws || !editingMessageId || !editingText.trim()) return;
+    ws.send(JSON.stringify({ event: 'edit_message', message_id: editingMessageId, text: editingText.trim() }));
+    setEditingMessageId(null);
+    setEditingText('');
+  }, [ws, editingMessageId, editingText]);
+
+  // Удаление сообщения
+  const deleteMessageForMe = useCallback((messageId: string) => {
+    if (!ws) return;
+    // backend ожидает mode: 'self' | 'all'
+    ws.send(JSON.stringify({ event: 'delete_message', message_id: messageId, mode: 'self' }));
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+  }, [ws]);
+
+  const deleteMessageForAll = useCallback((messageId: string) => {
+    if (!ws) return;
+    ws.send(JSON.stringify({ event: 'delete_message', message_id: messageId, mode: 'all' }));
+  }, [ws]);
+
+  /** -------------------- Отметка прочитанных сообщений -------------------- **/
+  const markMessagesAsRead = useCallback(() => {
+    if (!ws || !user) return;
+
+    messages.forEach(message => {
+      if (message.sender_id !== user.id && !message.is_read) {
+        ws.send(JSON.stringify({ event: 'read_message', message_id: message.id }));
+        setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m));
+      }
+    });
+  }, [ws, messages, user]);
+
+  // IntersectionObserver для автоматического прочтения видимых сообщений
+  useEffect(() => {
+    if (!messagesContainerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            markMessagesAsRead();
+          }
+        });
+      },
+      { root: messagesContainerRef.current, threshold: 1.0 }
+    );
+
+    const messageElements = messagesContainerRef.current.querySelectorAll('.message-item');
+    messageElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [messages, markMessagesAsRead]);
+
   /** -------------------- Форматирование -------------------- **/
   const formatMessageTime = (dateString: string) =>
     new Date(dateString).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -172,7 +249,6 @@ const ChatPage: React.FC = () => {
     const date = new Date(dateString);
     const now = new Date();
     const diffSec = (now.getTime() - date.getTime()) / 1000;
-
     if (diffSec < 60) return 'только что';
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)} мин назад`;
     if (diffSec < 86400) return `был(а) в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
@@ -196,7 +272,7 @@ const ChatPage: React.FC = () => {
   const shouldShowDateSeparator = (curr: Message, prev?: Message) => !prev || new Date(curr.created_at).toDateString() !== new Date(prev.created_at).toDateString();
   const shouldShowAvatar = (curr: Message, next?: Message) => !next || curr.sender_id !== next.sender_id;
 
-  /** -------------------- Intersection Observer -------------------- **/
+  /** -------------------- Intersection Observer для пагинации -------------------- **/
   useEffect(() => {
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && !isInitialLoadRef.current) loadMoreMessages();
@@ -229,7 +305,6 @@ const ChatPage: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-
           <div className="relative flex-shrink-0 cursor-pointer" onClick={() => navigate(`/profile/${participant.id}`)}>
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-200 to-rose-300 border-2 border-white shadow-sm overflow-hidden">
               {participant.avatar_url ? (
@@ -244,7 +319,6 @@ const ChatPage: React.FC = () => {
               {participant.status === 'online' && <div className="absolute inset-0.5 rounded-full bg-green-500 animate-pulse"></div>}
             </div>
           </div>
-
           <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/profile/${participant.id}`)}>
             <h2 className="text-lg font-semibold text-gray-900 truncate">{participant.name} {participant.surname}</h2>
             <p className="text-sm text-gray-600">{participant.status === 'online' ? 'в сети' : participant.last_seen ? formatLastSeen(participant.last_seen) : 'был(а) недавно'}</p>
@@ -276,7 +350,7 @@ const ChatPage: React.FC = () => {
             const isConsecutive = prev?.sender_id === message.sender_id && !showDate;
 
             return (
-              <div key={message.id}>
+              <div key={message.id} className="message-item">
                 {showDate && (
                   <div className="flex justify-center my-4">
                     <div className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{getMessageDate(message.created_at)}</div>
@@ -290,12 +364,39 @@ const ChatPage: React.FC = () => {
                     </div>
                   )}
                   <div className={`max-w-xs sm:max-w-md lg:max-w-lg ${isOwn ? 'order-first' : ''}`}>
-                    <div className={`px-4 py-2 rounded-2xl relative ${isOwn ? 'bg-rose-500 text-white rounded-br-md' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'} ${isConsecutive ? (isOwn ? 'rounded-br-2xl' : 'rounded-bl-2xl') : ''}`}>
-                      <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-                      {message.is_edited && <span className={`text-xs opacity-70 italic ${isOwn ? 'text-rose-100' : 'text-gray-500'}`}>изменено</span>}
-                    </div>
-                    <div className={`text-xs text-gray-500 mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
-                      {formatMessageTime(message.created_at)} {isOwn && <span className="ml-1">{message.is_read ? '✓✓' : '✓'}</span>}
+                    <div className={`px-3 py-2 rounded-2xl relative group ${isOwn ? 'bg-rose-500 text-white rounded-br-md' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'} ${isConsecutive ? (isOwn ? 'rounded-br-2xl' : 'rounded-bl-2xl') : ''}`}>
+                      {editingMessageId === message.id ? (
+                        <div className="flex items-end gap-2">
+                          <textarea
+                            className={`w-full bg-transparent border rounded-md px-2 py-1 text-sm ${isOwn ? 'border-rose-200 placeholder:opacity-70' : 'border-gray-300'}`}
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            rows={1}
+                          />
+                          <button onClick={saveEditMessage} className="text-xs px-2 py-1 rounded bg-emerald-500 text-white">Сохранить</button>
+                          <button onClick={cancelEditMessage} className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700">Отмена</button>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm whitespace-pre-wrap break-words pr-10">{message.text}</p>
+                          <div className={`absolute right-2 bottom-1 flex items-center gap-1 text-[10px] ${isOwn ? 'text-rose-100' : 'text-gray-500'}`}>
+                            <span>{formatMessageTime(message.created_at)}</span>
+                            {isOwn && (
+                              <span aria-label={message.is_read ? 'Прочитано' : 'Отправлено'}>{message.is_read ? '✓✓' : '✓'}</span>
+                            )}
+                          </div>
+                          {message.is_edited && (
+                            <div className={`mt-1 text-[10px] opacity-70 italic ${isOwn ? 'text-rose-100' : 'text-gray-500'}`}>изменено</div>
+                          )}
+                          {isOwn && (
+                            <div className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <button onClick={() => startEditMessage(message.id, message.text)} className="text-[11px] px-2 py-0.5 rounded bg-gray-200 text-gray-700">Ред.</button>
+                              <button onClick={() => deleteMessageForMe(message.id)} className="text-[11px] px-2 py-0.5 rounded bg-gray-200 text-gray-700">Уд.</button>
+                              <button onClick={() => deleteMessageForAll(message.id)} className="text-[11px] px-2 py-0.5 rounded bg-red-500 text-white">Для всех</button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                   {isOwn && <div className="w-8 flex-shrink-0" />}
